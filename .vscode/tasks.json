@@ -14,6 +14,14 @@
       "problemMatcher": []
     },
     {
+      "label": "Run_Wasm",
+      "type": "shell",
+      "command": "emrun --no-browser --port 8080 build/test/test.html",
+      "group": {
+        "kind": "test"
+      },
+    },
+    {
       "label": "build_native_wgpu",
       "type": "shell",
       "command": "cd build && cmake -DWEBGPU_BACKEND=WGPU .. && ninja",

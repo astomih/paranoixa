@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
+set(CMAKE_CXX_FLAGS "-g -O0")
 
 project(paranoixa)
 include(webgpu.cmake)
+
 include_directories(
   ${CMAKE_SOURCE_DIR}/include
   ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-emscripten-src/include
