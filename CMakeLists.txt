@@ -1,17 +1,28 @@
 cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
-set(CMAKE_CXX_FLAGS "-g -O0")
+
+if(!EMSCPRITEN)
+  set(CMAKE_CXX_FLAGS "-g -O0")
+endif()
 
 project(paranoixa)
 include(webgpu.cmake)
 
-include_directories(
-  ${CMAKE_SOURCE_DIR}/include
-  ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-emscripten-src/include
-  ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
-  ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-dawn-src/include
-)
+if(WIN32)
+  include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+
+    ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
+  )
+endif()
+
+if(EMSCRIPTEN)
+  include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+  )
+endif()
+
 file(GLOB
   SOURCE_FILES
   src/paranoixa.cpp

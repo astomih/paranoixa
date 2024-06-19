@@ -1,6 +1,7 @@
 #include <webgpu/webgpu.h>
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+#include <emscripten/html5.h>
 #endif // EMSCRIPTEN
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
@@ -39,23 +40,21 @@ void WebGPURenderer::Initialize(void *window) {
   CreateDevice();
   CreateQueue();
   CreateSurface(window);
-  std::cout << "Surface created!" << std::endl;
-
-  std::cout << "Surface Configuring... " << std::endl;
   ConfigSurface();
-  std::cout << "Surface Configured!" << std::endl;
 }
 void WebGPURenderer::CreateSurface(void *window) {
 #ifdef __EMSCRIPTEN__
-  WGPUSurfaceDescriptorFromCanvasHTMLSelector canvasDesc = {};
-  canvasDesc.chain.sType = WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
-  canvasDesc.selector = "#canvas";
+  WGPUSurfaceDescriptorFromCanvasHTMLSelector fromCanvasHTMLSelector = {};
+  fromCanvasHTMLSelector.chain.next = NULL;
+  fromCanvasHTMLSelector.chain.sType =
+      WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
+  fromCanvasHTMLSelector.selector = "canvas";
 
-  WGPUSurfaceDescriptor surfaceDesc = {};
-  std::cout << "Creating surface..." << std::endl;
-  surfaceDesc.nextInChain = reinterpret_cast<WGPUChainedStruct *>(&canvasDesc);
+  WGPUSurfaceDescriptor surfaceDescriptor = {};
+  surfaceDescriptor.nextInChain = &fromCanvasHTMLSelector.chain;
+  surfaceDescriptor.label = NULL;
 
-  m_surface = wgpuInstanceCreateSurface(m_instance, &surfaceDesc);
+  m_surface = wgpuInstanceCreateSurface(m_instance, &surfaceDescriptor);
 #endif
 #ifdef WIN32
   {
@@ -72,10 +71,8 @@ void WebGPURenderer::CreateSurface(void *window) {
             },
         .hinstance = hinstance,
         .hwnd = hwnd};
-    const WGPUChainedStruct *nextChain =
-        reinterpret_cast<const WGPUChainedStruct *>(&desc);
     auto descriptor =
-        (WGPUSurfaceDescriptor){.label = nullptr, .nextInChain = nextChain};
+        (WGPUSurfaceDescriptor){.nextInChain = &desc.chain, .label = NULL};
     m_surface = wgpuInstanceCreateSurface(m_instance, &descriptor);
   }
 #endif
@@ -141,6 +138,15 @@ void WebGPURenderer::CreateDevice() {
     userData.requestEnded = true;
   };
   WGPUDeviceDescriptor descriptor{};
+  descriptor.deviceLostCallback = [](WGPUDeviceLostReason reason,
+                                     char const *message,
+                                     void * /* pUserData */) {
+    std::cout << "Device lost: reason " << reason;
+    if (message)
+      std::cout << " (" << message << ")";
+    std::cout << std::endl;
+  };
+
   wgpuAdapterRequestDevice(m_adapter, &descriptor, onDeviceRequestEnded,
                            (void *)&userData);
 
@@ -151,28 +157,27 @@ void WebGPURenderer::CreateDevice() {
 #endif // __EMSCRIPTEN__
   std::cout << "Got device: " << userData.device << std::endl;
   m_device = userData.device;
+  auto onDeviceError = [](WGPUErrorType type, char const *message,
+                          void * /* pUserData */) {
+    std::cout << "Uncaptured device error: type " << type;
+    if (message)
+      std::cout << " (" << message << ")";
+    std::cout << std::endl;
+  };
+  wgpuDeviceSetUncapturedErrorCallback(m_device, onDeviceError,
+                                       nullptr /* pUserData */);
 }
 void WebGPURenderer::CreateQueue() { m_queue = wgpuDeviceGetQueue(m_device); }
 void WebGPURenderer::ConfigSurface() {
-  if (!m_surface) {
-    std::cout << "Surface is not created!" << std::endl;
-    return;
-  }
-  if (!m_device) {
-    std::cout << "Device is not created!" << std::endl;
-    return;
-  }
-  if (!m_adapter) {
-    std::cout << "Adapter is not created!" << std::endl;
-    return;
-  }
-  WGPUSurfaceConfiguration config{};
+  WGPUSurfaceConfiguration config = {};
   config.nextInChain = nullptr;
+
   config.width = 640;
   config.height = 480;
   config.usage = WGPUTextureUsage_RenderAttachment;
   WGPUTextureFormat surfaceFormat =
       wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
+  std::cout << "Surface format: " << surfaceFormat << std::endl;
   config.format = surfaceFormat;
   config.viewFormatCount = 0;
   config.viewFormats = nullptr;
@@ -211,6 +216,7 @@ void WebGPURenderer::Render() {
   }
   WGPUTextureView targetView = GetNextSurfaceTextureView();
   if (!targetView) {
+    std::cout << "Could not get target view!" << std::endl;
     return;
   }
 
@@ -227,7 +233,10 @@ void WebGPURenderer::Render() {
   colorAttachment.loadOp = WGPULoadOp_Clear;
   colorAttachment.storeOp = WGPUStoreOp_Store;
   colorAttachment.clearValue =
-      (WGPUColor){.r = 0.2f, .g = 0.2f, .b = 1.0f, .a = 1.0f};
+      WGPUColor{.r = 0.2f, .g = 0.2f, .b = 1.0f, .a = 1.0f};
+#ifndef WIN32
+  colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
+#endif
 
   WGPURenderPassDescriptor renderPassDesc{};
   renderPassDesc.nextInChain = nullptr;
@@ -249,6 +258,8 @@ void WebGPURenderer::Render() {
   wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
   wgpuCommandBufferRelease(cmdBuffer);
   wgpuTextureViewRelease(targetView);
+#ifndef __EMSCRIPTEN__
   wgpuSurfacePresent(m_surface);
+#endif
 }
 } // namespace paranoixa

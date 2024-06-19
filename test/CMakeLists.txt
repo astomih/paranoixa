@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.10)
 
 project(test)
 include_directories(${CMAKE_SOURCE_DIR}/include)
-set(CMAKE_CXX_FLAGS "-g -O0")
 
 if(EMSCRIPTEN)
 	set(CMAKE_CXX_FLAGS
 		"${CMAKE_CXX_FLAGS} \
 		-Wno-unused-command-line-argument \
+		-s WASM=1 \
 		-s USE_WEBGPU=1 \
 		-s USE_SDL=2 \
 		-s ASYNCIFY=1 \
@@ -18,6 +18,7 @@ if(EMSCRIPTEN)
 endif()
 
 if(WIN32)
+	set(CMAKE_CXX_FLAGS "-g -O0")
 	find_package(Vulkan REQUIRED)
 	find_package(SDL2 REQUIRED)
 	add_executable(test test.cpp)
