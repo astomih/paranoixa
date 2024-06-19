@@ -6,17 +6,16 @@
     {
       "label": "build_wasm_wgpu",
       "type": "shell",
-      "command": "cd build && emcmake cmake -DWEBGPU_BACKEND=EMSCRIPTEN .. && ninja",
+      "command": "cd build/wasm && emcmake cmake -DWEBGPU_BACKEND=EMSCRIPTEN ../.. && ninja",
       "group": {
         "kind": "build",
-        "isDefault": true
       },
       "problemMatcher": []
     },
     {
       "label": "Run_Wasm",
       "type": "shell",
-      "command": "emrun --no-browser --port 8080 build/test/test.html",
+      "command": "emrun --no-browser --port 8080 build/wasm/test/test.html",
       "group": {
         "kind": "test"
       },
@@ -27,6 +26,7 @@
       "command": "cd build && cmake -DWEBGPU_BACKEND=WGPU .. && ninja",
       "group": {
         "kind": "build",
+        "isDefault": true
       },
       "problemMatcher": []
     },

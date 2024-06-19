@@ -41,6 +41,8 @@ void WebGPURenderer::Initialize(void *window) {
   CreateQueue();
   CreateSurface(window);
   ConfigSurface();
+  InitializePipeline();
+  std::cout << "WebGPU renderer initialized!" << std::endl;
 }
 void WebGPURenderer::CreateSurface(void *window) {
 #ifdef __EMSCRIPTEN__
@@ -155,7 +157,7 @@ void WebGPURenderer::CreateDevice() {
     emscripten_sleep(100);
   }
 #endif // __EMSCRIPTEN__
-  std::cout << "Got device: " << userData.device << std::endl;
+  std::cout << "Device: " << userData.device << std::endl;
   m_device = userData.device;
   auto onDeviceError = [](WGPUErrorType type, char const *message,
                           void * /* pUserData */) {
@@ -175,18 +177,15 @@ void WebGPURenderer::ConfigSurface() {
   config.width = 640;
   config.height = 480;
   config.usage = WGPUTextureUsage_RenderAttachment;
-  WGPUTextureFormat surfaceFormat =
-      wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
-  std::cout << "Surface format: " << surfaceFormat << std::endl;
-  config.format = surfaceFormat;
+  m_surfaceFormat = wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
+  std::cout << "Surface format: " << m_surfaceFormat << std::endl;
+  config.format = m_surfaceFormat;
   config.viewFormatCount = 0;
   config.viewFormats = nullptr;
   config.device = m_device;
   config.presentMode = WGPUPresentMode_Fifo;
   config.alphaMode = WGPUCompositeAlphaMode_Auto;
-  std::cout << "Surface configuring..." << std::endl;
   wgpuSurfaceConfigure(m_surface, &config);
-  std::cout << "Surface configured!" << std::endl;
 }
 WGPUTextureView WebGPURenderer::GetNextSurfaceTextureView() {
 
@@ -233,7 +232,7 @@ void WebGPURenderer::Render() {
   colorAttachment.loadOp = WGPULoadOp_Clear;
   colorAttachment.storeOp = WGPUStoreOp_Store;
   colorAttachment.clearValue =
-      WGPUColor{.r = 0.2f, .g = 0.2f, .b = 1.0f, .a = 1.0f};
+      WGPUColor{.r = 1.0f, .g = 0.4f, .b = 0.0f, .a = 1.0f};
 #ifndef WIN32
   colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
@@ -243,10 +242,15 @@ void WebGPURenderer::Render() {
   renderPassDesc.colorAttachmentCount = 1;
   renderPassDesc.colorAttachments = &colorAttachment;
   renderPassDesc.depthStencilAttachment = nullptr;
-  WGPURenderPassEncoder renderPassEncoder =
+  WGPURenderPassEncoder renderPass =
       wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
-  wgpuRenderPassEncoderEnd(renderPassEncoder);
-  wgpuRenderPassEncoderReference(renderPassEncoder);
+
+  // Set the pipeline and draw
+  wgpuRenderPassEncoderSetPipeline(renderPass, m_pipeline);
+  wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
+
+  wgpuRenderPassEncoderEnd(renderPass);
+  wgpuRenderPassEncoderReference(renderPass);
 
   // Submit the command buffer
   WGPUCommandBufferDescriptor cmdBufferDesc{};
@@ -261,5 +265,97 @@ void WebGPURenderer::Render() {
 #ifndef __EMSCRIPTEN__
   wgpuSurfacePresent(m_surface);
 #endif
+}
+void WebGPURenderer::InitializePipeline() {
+  WGPUShaderModuleDescriptor shaderDesc{};
+#ifndef __EMSCRIPTEN__
+  shaderDesc.hintCount = 0;
+  shaderDesc.hints = nullptr;
+#endif
+  WGPUShaderModuleWGSLDescriptor wgslDesc{};
+  wgslDesc.chain.next = nullptr;
+  wgslDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+  shaderDesc.nextInChain = &wgslDesc.chain;
+  wgslDesc.code = R"(
+@vertex
+fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4f {
+	var p = vec2f(0.0, 0.0);
+	if (in_vertex_index == 0u) {
+		p = vec2f(-0.5, -0.5);
+	} else if (in_vertex_index == 1u) {
+		p = vec2f(0.5, -0.5);
+	} else {
+		p = vec2f(0.0, 0.5);
+	}
+	return vec4f(p, 0.0, 1.0);
+}
+
+@fragment
+fn fs_main() -> @location(0) vec4f {
+	return vec4f(1.0, 1.0, 1.0, 1.0);
+}
+)";
+  WGPUShaderModule shaderModule =
+      wgpuDeviceCreateShaderModule(m_device, &shaderDesc);
+
+  WGPURenderPipelineDescriptor pipelineDesc{};
+  pipelineDesc.nextInChain = nullptr;
+  pipelineDesc.vertex.bufferCount = 0;
+  pipelineDesc.vertex.buffers = nullptr;
+
+  pipelineDesc.vertex.module = shaderModule;
+  pipelineDesc.vertex.entryPoint = "vs_main";
+  pipelineDesc.vertex.constantCount = 0;
+  pipelineDesc.vertex.constants = nullptr;
+
+  pipelineDesc.primitive.topology = WGPUPrimitiveTopology_TriangleList;
+  pipelineDesc.primitive.stripIndexFormat = WGPUIndexFormat_Undefined;
+  pipelineDesc.primitive.frontFace = WGPUFrontFace_CCW;
+  pipelineDesc.primitive.cullMode = WGPUCullMode_None;
+
+  WGPUFragmentState fragmentState{};
+  fragmentState.module = shaderModule;
+  fragmentState.entryPoint = "fs_main";
+  fragmentState.constantCount = 0;
+  fragmentState.constants = nullptr;
+
+  WGPUBlendState blendState{};
+  blendState.color.srcFactor = WGPUBlendFactor_SrcAlpha;
+  blendState.color.dstFactor = WGPUBlendFactor_OneMinusSrcAlpha;
+  blendState.color.operation = WGPUBlendOperation_Add;
+  blendState.alpha.srcFactor = WGPUBlendFactor_Zero;
+  blendState.alpha.dstFactor = WGPUBlendFactor_One;
+  blendState.alpha.operation = WGPUBlendOperation_Add;
+
+  WGPUColorTargetState colorTarget{};
+  colorTarget.format = m_surfaceFormat;
+  colorTarget.blend = &blendState;
+  colorTarget.writeMask = WGPUColorWriteMask_All; // We could write to only some
+                                                  // of the color channels.
+
+  // We have only one target because our render pass has only one output color
+  // attachment.
+  fragmentState.targetCount = 1;
+  fragmentState.targets = &colorTarget;
+  pipelineDesc.fragment = &fragmentState;
+
+  // We do not use stencil/depth testing for now
+  pipelineDesc.depthStencil = nullptr;
+
+  // Samples per pixel
+  pipelineDesc.multisample.count = 1;
+
+  // Default value for the mask, meaning "all bits on"
+  pipelineDesc.multisample.mask = ~0u;
+
+  // Default value as well (irrelevant for count = 1 anyways)
+  pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+  pipelineDesc.layout = nullptr;
+
+  m_pipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDesc);
+
+  // We no longer need to access the shader module
+  wgpuShaderModuleRelease(shaderModule);
 }
 } // namespace paranoixa

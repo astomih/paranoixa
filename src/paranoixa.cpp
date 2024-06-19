@@ -41,8 +41,13 @@ void Application::Initialize(GraphicsAPI api) {
     std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
   }
   uint32_t windowFlags = 0;
+#ifdef __EMSCRIPTEN__
+  const char *windowName = "Paranoixa ( WASM )";
+#else
+  const char *windowName = "Paranoixa ( Native )";
+#endif // __EMSCRIPTEN__
   m_implement->window =
-      SDL_CreateWindow("Paranoixa", SDL_WINDOWPOS_CENTERED,
+      SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED,
                        SDL_WINDOWPOS_CENTERED, 640, 480, windowFlags);
   m_implement->renderer->Initialize(m_implement->window);
 #ifdef __EMSCRIPTEN__

@@ -22,6 +22,8 @@ private:
 
   void ConfigSurface();
 
+  void InitializePipeline();
+
   WGPUTextureView GetNextSurfaceTextureView();
 
   // WebGPU instance
@@ -36,6 +38,10 @@ private:
   WGPUSurface m_surface;
   // WebGPU surface texture view
   WGPUTextureView m_targetView;
+
+  WGPUTextureFormat m_surfaceFormat;
+
+  WGPURenderPipeline m_pipeline;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_WEBGPU_RENDERER_HPP
