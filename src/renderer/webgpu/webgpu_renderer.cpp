@@ -177,7 +177,7 @@ void WebGPURenderer::ConfigSurface() {
   config.width = 640;
   config.height = 480;
   config.usage = WGPUTextureUsage_RenderAttachment;
-  m_surfaceFormat = wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
+  m_surfaceFormat = WGPUTextureFormat_BGRA8UnormSrgb;
   std::cout << "Surface format: " << m_surfaceFormat << std::endl;
   config.format = m_surfaceFormat;
   config.viewFormatCount = 0;
