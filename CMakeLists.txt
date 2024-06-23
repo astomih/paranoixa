@@ -2,14 +2,11 @@ cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
-if(!EMSCPRITEN)
-  set(CMAKE_CXX_FLAGS "-g -O0")
-endif()
-
 project(paranoixa)
 include(webgpu.cmake)
 
 if(WIN32)
+  set(CMAKE_CXX_FLAGS "-g -O0")
   include_directories(
     ${CMAKE_SOURCE_DIR}/include
 
