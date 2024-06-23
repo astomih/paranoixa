@@ -1,2 +1,2 @@
 # Paranoixa
-Paranoixa is Vulkan and WebGPU based renderer written in C++.
+Paranoixa is Vulkan and WebGPU based engine written in C++.
