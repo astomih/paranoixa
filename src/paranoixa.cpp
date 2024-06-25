@@ -5,6 +5,7 @@
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
 #include "renderer/renderer.hpp"
+#include "renderer/vulkan/vulkan_renderer.hpp"
 #include "renderer/webgpu/webgpu_renderer.hpp"
 #include <iostream>
 #include <memory>
@@ -33,6 +34,7 @@ void Application::Initialize(GraphicsAPI api) {
     break;
   }
   case GraphicsAPI::Vulkan:
+    m_implement->renderer = std::make_unique<VulkanRenderer>();
     break;
   }
 
@@ -44,10 +46,18 @@ void Application::Initialize(GraphicsAPI api) {
 #ifdef __EMSCRIPTEN__
   const char *windowName = "Paranoixa ( WASM )";
 #else
-  const char *windowName = "Paranoixa ( Native )";
+  std::string windowName;
+  switch (api) {
+  case GraphicsAPI::WebGPU:
+    windowName = "Paranoixa ( Native WGPU )";
+    break;
+  case GraphicsAPI::Vulkan:
+    windowName = "Paranoixa ( Native Vulkan )";
+    break;
+  }
 #endif // __EMSCRIPTEN__
   m_implement->window =
-      SDL_CreateWindow(windowName, SDL_WINDOWPOS_CENTERED,
+      SDL_CreateWindow(windowName.c_str(), SDL_WINDOWPOS_CENTERED,
                        SDL_WINDOWPOS_CENTERED, 640, 480, windowFlags);
   m_implement->renderer->Initialize(m_implement->window);
 #ifdef __EMSCRIPTEN__
