@@ -1,5 +1,4 @@
-
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
@@ -34,17 +33,19 @@ void Application::Initialize(GraphicsAPI api) {
     break;
   }
   case GraphicsAPI::Vulkan:
+#ifndef __EMSCRIPTEN__
     m_implement->renderer = std::make_unique<VulkanRenderer>();
+#endif
     break;
   }
 
-  SDL_SetMainReady();
+  // SDL_SetMainReady();
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
   }
   uint32_t windowFlags = 0;
 #ifdef __EMSCRIPTEN__
-  const char *windowName = "Paranoixa ( WASM )";
+  std::string windowName = "Paranoixa ( WASM )";
 #else
   std::string windowName;
   switch (api) {
@@ -57,8 +58,7 @@ void Application::Initialize(GraphicsAPI api) {
   }
 #endif // __EMSCRIPTEN__
   m_implement->window =
-      SDL_CreateWindow(windowName.c_str(), SDL_WINDOWPOS_CENTERED,
-                       SDL_WINDOWPOS_CENTERED, 640, 480, windowFlags);
+      SDL_CreateWindow(windowName.c_str(), 640, 480, windowFlags);
   m_implement->renderer->Initialize(m_implement->window);
 #ifdef __EMSCRIPTEN__
   emscripten_set_main_loop_arg(
@@ -80,7 +80,7 @@ bool Application::IsRunning() { return m_implement->running; }
 void Application::Loop() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
-    if (event.type == SDL_QUIT) {
+    if (event.type == SDL_EVENT_QUIT) {
       m_implement->running = false;
     }
   }

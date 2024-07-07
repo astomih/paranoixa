@@ -2,7 +2,7 @@
 #define PARANOIXA_WEBGPU_RENDERER_HPP
 #include "../renderer.hpp"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <webgpu/webgpu.h>
 
 namespace paranoixa {

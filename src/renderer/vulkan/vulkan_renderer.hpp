@@ -4,6 +4,7 @@
 #ifndef __EMSCRIPTEN__
 #include "../renderer.hpp"
 
+#include <volk.h>
 #include <vulkan/vulkan.h>
 namespace paranoixa {
 class VulkanRenderer : public Renderer {
@@ -12,6 +13,9 @@ public:
   ~VulkanRenderer();
   void Initialize(void *window) override;
   void Render() override;
+
+private:
+  void CreateInstance(void *window);
 };
 } // namespace paranoixa
 #endif // __EMSCRIPTEN__
