@@ -5,7 +5,7 @@ namespace paranoixa {
 class Renderer {
 public:
   Renderer() = default;
-  ~Renderer() = default;
+  virtual ~Renderer() = default;
   virtual void Initialize(void *window) = 0;
   virtual void Render() = 0;
 };

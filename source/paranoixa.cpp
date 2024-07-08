@@ -19,6 +19,7 @@ public:
   bool running = true;
 };
 Application::Implement::~Implement() {
+  renderer.reset();
   // SDL_DestroyWindow(window);
   SDL_Quit();
 }
@@ -39,7 +40,6 @@ void Application::Initialize(GraphicsAPI api) {
     break;
   }
 
-  // SDL_SetMainReady();
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
   }
@@ -53,6 +53,7 @@ void Application::Initialize(GraphicsAPI api) {
     windowName = "Paranoixa ( Native WGPU )";
     break;
   case GraphicsAPI::Vulkan:
+    windowFlags |= SDL_WINDOW_VULKAN;
     windowName = "Paranoixa ( Native Vulkan )";
     break;
   }

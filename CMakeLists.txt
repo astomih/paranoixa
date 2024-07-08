@@ -6,17 +6,17 @@ set(CMAKE_CXX_STANDARD 20)
 project(paranoixa)
 add_subdirectory(test)
 include(webgpu.cmake)
-add_subdirectory(libs/SDL EXCLUDE_FROM_ALL)
+add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 find_package(Vulkan)
 
 if(WIN32)
   set(CMAKE_CXX_FLAGS "-g -O0")
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
-    ${CMAKE_SOURCE_DIR}/libs/SDL/include
+    ${CMAKE_SOURCE_DIR}/library/SDL/include
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
-    ${CMAKE_SOURCE_DIR}/libs/volk
+    ${CMAKE_SOURCE_DIR}/library/volk
   )
 endif()
 
@@ -28,15 +28,15 @@ endif()
 
 file(GLOB
   SOURCE_FILES
-  src/paranoixa.cpp
-  src/*/*.cpp
+  source/paranoixa.cpp
+  source/*/*.cpp
 )
 
 if(EMSCRIPTEN)
   file(GLOB
     SOURCE_FILES
     ${SOURCE_FILES}
-    src/renderer/webgpu/*.cpp
+    source/renderer/webgpu/*.cpp
   )
 endif()
 
@@ -44,8 +44,8 @@ if(WIN32)
   file(GLOB
     SOURCE_FILES
     ${SOURCE_FILES}
-    libs/volk/volk.c
-    src/*/*/*.cpp
+    library/volk/volk.c
+    source/*/*/*.cpp
   )
 endif()
 
