@@ -1,3 +1,6 @@
 [submodule "libs/SDL"]
 	path = library/SDL
 	url = https://github.com/libsdl-org/SDL
+[submodule "library/SDL"]
+	path = library/SDL
+	url = https://github.com/libsdl-org/SDL
