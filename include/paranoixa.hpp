@@ -23,7 +23,7 @@ private:
   struct ImplementDeleter {
     void operator()(Implement *implement);
   };
-  std::unique_ptr<Implement, ImplementDeleter> m_implement;
+  std::unique_ptr<Implement, ImplementDeleter> implement;
 };
 } // namespace paranoixa
 #endif

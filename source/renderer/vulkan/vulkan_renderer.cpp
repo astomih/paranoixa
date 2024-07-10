@@ -6,8 +6,8 @@
 namespace paranoixa {
 VulkanRenderer::VulkanRenderer() {}
 VulkanRenderer::~VulkanRenderer() {
-  vkDestroyDevice(m_device, nullptr);
-  vkDestroyInstance(m_instance, nullptr);
+  vkDestroyDevice(device, nullptr);
+  vkDestroyInstance(instance, nullptr);
 }
 void VulkanRenderer::Initialize(void *window) {
   volkInitialize();
@@ -59,9 +59,9 @@ void VulkanRenderer::CreateInstance(void *window) {
   createInfo.ppEnabledExtensionNames = extensions.data();
   createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
   createInfo.ppEnabledLayerNames = layers.data();
-  VkResult result = vkCreateInstance(&createInfo, nullptr, &m_instance);
+  VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
   if (result == VkResult::VK_SUCCESS) {
-    volkLoadInstance(m_instance);
+    volkLoadInstance(instance);
   }
 }
 void VulkanRenderer::CreateDevice() {
@@ -69,19 +69,19 @@ void VulkanRenderer::CreateDevice() {
   // Create physical device
   //------------------------
   uint32_t count = 0;
-  vkEnumeratePhysicalDevices(m_instance, &count, nullptr);
+  vkEnumeratePhysicalDevices(instance, &count, nullptr);
   std::vector<VkPhysicalDevice> physicalDevices(count);
-  vkEnumeratePhysicalDevices(m_instance, &count, physicalDevices.data());
+  vkEnumeratePhysicalDevices(instance, &count, physicalDevices.data());
 
   // Choose first
-  m_physicalDevice = physicalDevices[0];
+  physicalDevice = physicalDevices[0];
 
-  vkGetPhysicalDeviceMemoryProperties(m_physicalDevice,
-                                      &m_physicalDeviceMemoryProperties);
+  vkGetPhysicalDeviceMemoryProperties(physicalDevice,
+                                      &physicalDeviceMemoryProperties);
 
-  vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &count, nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
   std::vector<VkQueueFamilyProperties> queueFamilyProps(count);
-  vkGetPhysicalDeviceQueueFamilyProperties(m_physicalDevice, &count,
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count,
                                            queueFamilyProps.data());
   uint32_t gfxQueueIndex = ~0u;
   for (uint32_t i = 0; const auto &props : queueFamilyProps) {
@@ -92,7 +92,7 @@ void VulkanRenderer::CreateDevice() {
     ++i;
   }
   assert(gfxQueueIndex != ~0u);
-  m_graphicsQueueIndex = gfxQueueIndex;
+  graphicsQueueIndex = gfxQueueIndex;
 
   //------------------------
   // Create logic device
@@ -106,11 +106,11 @@ void VulkanRenderer::CreateDevice() {
   vulkan13Features.dynamicRendering = VK_TRUE;
   vulkan13Features.synchronization2 = VK_TRUE;
   vulkan13Features.maintenance4 = VK_TRUE;
-  vkGetPhysicalDeviceFeatures2(m_physicalDevice, &physFeatures2);
+  vkGetPhysicalDeviceFeatures2(physicalDevice, &physFeatures2);
   const float queuePriorities[] = {1.f};
   VkDeviceQueueCreateInfo deviceQueueCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-      .queueFamilyIndex = m_graphicsQueueIndex,
+      .queueFamilyIndex = graphicsQueueIndex,
       .queueCount = 1,
       .pQueuePriorities = queuePriorities};
   VkDeviceCreateInfo deviceCreateInfo{
@@ -121,11 +121,11 @@ void VulkanRenderer::CreateDevice() {
       .ppEnabledExtensionNames = extensions.data()};
   deviceCreateInfo.pNext = &physFeatures2;
   auto result =
-      vkCreateDevice(m_physicalDevice, &deviceCreateInfo, nullptr, &m_device);
+      vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
   if (result == VkResult::VK_SUCCESS) {
 
-    volkLoadDevice(m_device);
-    vkGetDeviceQueue(m_device, m_graphicsQueueIndex, 0, &m_graphicsQueue);
+    volkLoadDevice(device);
+    vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
   }
 }
 } // namespace paranoixa

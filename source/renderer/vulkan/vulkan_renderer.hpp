@@ -19,12 +19,12 @@ private:
   void CreateInstance(void *window);
   void CreateDevice();
 
-  VkInstance m_instance;
-  VkPhysicalDevice m_physicalDevice;
-  VkPhysicalDeviceMemoryProperties m_physicalDeviceMemoryProperties;
-  uint32_t m_graphicsQueueIndex;
-  VkDevice m_device;
-  VkQueue m_graphicsQueue;
+  VkInstance instance;
+  VkPhysicalDevice physicalDevice;
+  VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
+  uint32_t graphicsQueueIndex;
+  VkDevice device;
+  VkQueue graphicsQueue;
 };
 } // namespace paranoixa
 #endif // __EMSCRIPTEN__

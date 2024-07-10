@@ -27,15 +27,15 @@ void Application::ImplementDeleter::operator()(Implement *implement) {
   delete implement;
 }
 void Application::Initialize(GraphicsAPI api) {
-  m_implement = std::unique_ptr<Implement, ImplementDeleter>(new Implement());
+  implement = std::unique_ptr<Implement, ImplementDeleter>(new Implement());
   switch (api) {
   case GraphicsAPI::WebGPU: {
-    m_implement->renderer = std::make_unique<WebGPURenderer>();
+    implement->renderer = std::make_unique<WebGPURenderer>();
     break;
   }
   case GraphicsAPI::Vulkan:
 #ifndef __EMSCRIPTEN__
-    m_implement->renderer = std::make_unique<VulkanRenderer>();
+    implement->renderer = std::make_unique<VulkanRenderer>();
 #endif
     break;
   }
@@ -58,9 +58,9 @@ void Application::Initialize(GraphicsAPI api) {
     break;
   }
 #endif // __EMSCRIPTEN__
-  m_implement->window =
+  implement->window =
       SDL_CreateWindow(windowName.c_str(), 640, 480, windowFlags);
-  m_implement->renderer->Initialize(m_implement->window);
+  implement->renderer->Initialize(implement->window);
 #ifdef __EMSCRIPTEN__
   emscripten_set_main_loop_arg(
       [](void *userData) {
@@ -77,14 +77,14 @@ void Application::Run() {
   }
 #endif
 }
-bool Application::IsRunning() { return m_implement->running; }
+bool Application::IsRunning() { return implement->running; }
 void Application::Loop() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_EVENT_QUIT) {
-      m_implement->running = false;
+      implement->running = false;
     }
   }
-  m_implement->renderer->Render();
+  implement->renderer->Render();
 }
 } // namespace paranoixa
