@@ -17,6 +17,7 @@ if(WIN32)
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
     ${CMAKE_SOURCE_DIR}/library/volk
+    ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator
   )
 endif()
 
@@ -44,7 +45,8 @@ if(WIN32)
   file(GLOB
     SOURCE_FILES
     ${SOURCE_FILES}
-    library/volk/volk.c
+    library/*.c
+    library/*.cpp
     source/*/*/*.cpp
   )
 endif()
