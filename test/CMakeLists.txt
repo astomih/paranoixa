@@ -9,7 +9,6 @@ if(EMSCRIPTEN)
 		-Wno-unused-command-line-argument \
 		-s WASM=1 \
 		-s USE_WEBGPU=1 \
-		-s USE_SDL=2 \
 		-s ASYNCIFY=1 \
 		-std=c++20")
 	add_executable(test test.cpp)
@@ -18,9 +17,9 @@ if(EMSCRIPTEN)
 endif()
 
 if(WIN32)
-	set(CMAKE_CXX_FLAGS "-g -O0")
-	find_package(Vulkan REQUIRED)
-	find_package(SDL2 REQUIRED)
+	link_directories(
+		..
+	)
 	add_executable(test test.cpp)
-	target_link_libraries(test PRIVATE paranoixa SDL2 SDL2main webgpu)
+	target_link_libraries(test PRIVATE paranoixa)
 endif()

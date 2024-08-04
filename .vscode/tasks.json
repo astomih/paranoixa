@@ -21,7 +21,7 @@
       },
     },
     {
-      "label": "build_native_wgpu",
+      "label": "build_native",
       "type": "shell",
       "command": "cd build && cmake -DWEBGPU_BACKEND=WGPU .. && ninja",
       "group": {

@@ -4,8 +4,12 @@
 #include <emscripten/html5.h>
 #endif // EMSCRIPTEN
 #define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_syswm.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <SDL3/SDL_system.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "webgpu_renderer.hpp"
 #include <iostream>
@@ -58,23 +62,22 @@ void WebGPURenderer::CreateSurface(void *window) {
 
   m_surface = wgpuInstanceCreateSurface(m_instance, &surfaceDescriptor);
 #endif
-#ifdef WIN32
+#ifdef _WIN32
   {
-    SDL_SysWMinfo windowWMInfo;
-    SDL_VERSION(&windowWMInfo.version);
-    SDL_GetWindowWMInfo((::SDL_Window *)window, &windowWMInfo);
-    HWND hwnd = windowWMInfo.info.win.window;
+    HWND hwnd =
+        (HWND)SDL_GetProperty(SDL_GetWindowProperties((::SDL_Window *)window),
+                              SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
     HINSTANCE hinstance = GetModuleHandle(NULL);
     WGPUSurfaceDescriptorFromWindowsHWND desc{
         .chain =
-            (WGPUChainedStruct){
+            WGPUChainedStruct{
                 .next = NULL,
                 .sType = WGPUSType_SurfaceDescriptorFromWindowsHWND,
             },
         .hinstance = hinstance,
         .hwnd = hwnd};
     auto descriptor =
-        (WGPUSurfaceDescriptor){.nextInChain = &desc.chain, .label = NULL};
+        WGPUSurfaceDescriptor{.nextInChain = &desc.chain, .label = NULL};
     m_surface = wgpuInstanceCreateSurface(m_instance, &descriptor);
   }
 #endif
@@ -178,6 +181,8 @@ void WebGPURenderer::ConfigSurface() {
   config.height = 480;
   config.usage = WGPUTextureUsage_RenderAttachment;
   m_surfaceFormat = WGPUTextureFormat_BGRA8UnormSrgb;
+  m_surfaceFormat = wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
+  m_surfaceFormat = WGPUTextureFormat_RGBA8Unorm;
   std::cout << "Surface format: " << m_surfaceFormat << std::endl;
   config.format = m_surfaceFormat;
   config.viewFormatCount = 0;
@@ -233,7 +238,7 @@ void WebGPURenderer::Render() {
   colorAttachment.storeOp = WGPUStoreOp_Store;
   colorAttachment.clearValue =
       WGPUColor{.r = 1.0f, .g = 0.4f, .b = 0.0f, .a = 1.0f};
-#ifndef WIN32
+#ifndef _WIN32
   colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
 
