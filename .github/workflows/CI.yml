@@ -29,5 +29,6 @@ jobs:
         vulkan-use-cache: true
     - name: Build
       run: |
+          git submodule update --init --recursive
           cmake -G Ninja -B build 
           cd build && ninja
