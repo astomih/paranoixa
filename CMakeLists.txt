@@ -14,7 +14,7 @@ if(WIN32)
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/library/SDL/include
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
     ${CMAKE_SOURCE_DIR}/library/volk
     ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator
