@@ -48,7 +48,7 @@ public:
    * @return true The timer is started
    * @return false The timer is not started
    */
-  bool is_started() { return m_is_started; }
+  bool is_started() { return isStarted; }
   /**
    * @brief Stop the timer
    *
@@ -56,9 +56,9 @@ public:
   void stop();
 
 private:
-  float m_start;
-  float m_time;
-  bool m_is_started;
+  float startTime;
+  float time;
+  bool isStarted;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_TIME_TIMER_HPP

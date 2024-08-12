@@ -21,14 +21,12 @@ public:
   /**
    * @brief Construct a new quaternion object
    *
-   * @param inX
-   * @param inY
-   * @param inZ
-   * @param inW
+   * @param x
+   * @param y
+   * @param z
+   * @param w
    */
-  explicit Quaternion(float inX, float inY, float inZ, float inW) {
-    set(inX, inY, inZ, inW);
-  }
+  explicit Quaternion(float x, float y, float z, float w) { set(x, y, z, w); }
   explicit Quaternion(const Vector3 &axis, float angle) {
     const auto scalar = Math::sin(angle / 2.0f);
     x = axis.x * scalar;
