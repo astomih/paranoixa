@@ -9,16 +9,16 @@ public:
   /**
    * @brief Construct a new rect object
    *
-   * @param x_ x position
-   * @param y_ y position
-   * @param w_ width
-   * @param h_ height
+   * @param x x position
+   * @param y y position
+   * @param w width
+   * @param h height
    */
-  void set(float x_, float y_, float w_, float h_) {
-    x = x_;
-    y = y_;
-    w = w_;
-    h = h_;
+  void set(float x, float y, float w, float h) {
+    this->x = x;
+    this->y = y;
+    this->w = w;
+    this->h = h;
   }
 
   /**
@@ -31,13 +31,14 @@ public:
   /**
    * @brief Check if the rect contains a point
    *
-   * @param x_
-   * @param y_
+   * @param x
+   * @param y
    * @return true
    * @return false
    */
-  bool contains(float x_, float y_) const {
-    return x_ >= x && x_ <= x + w && y_ >= y && y_ <= y + h;
+  bool contains(float x, float y) const {
+    return x >= this->x && x <= this->x + this->w && y >= this->y &&
+           y <= this->y + this->h;
   }
 
   /**
