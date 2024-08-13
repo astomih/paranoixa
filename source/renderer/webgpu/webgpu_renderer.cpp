@@ -17,25 +17,22 @@
 namespace paranoixa {
 WebGPURenderer::WebGPURenderer() {}
 WebGPURenderer::~WebGPURenderer() {
-  if (m_targetView) {
-    wgpuTextureViewRelease(m_targetView);
-  }
 #ifndef __EMSCRIPTEN__
-  if (m_surface) {
-    wgpuSurfaceRelease(m_surface);
+  if (surface) {
+    wgpuSurfaceRelease(surface);
   }
 #endif
-  if (m_queue) {
-    wgpuQueueRelease(m_queue);
+  if (queue) {
+    wgpuQueueRelease(queue);
   }
-  if (m_device) {
-    wgpuDeviceRelease(m_device);
+  if (device) {
+    wgpuDeviceRelease(device);
   }
-  if (m_adapter) {
-    wgpuAdapterRelease(m_adapter);
+  if (adapter) {
+    wgpuAdapterRelease(adapter);
   }
-  if (m_instance) {
-    wgpuInstanceRelease(m_instance);
+  if (instance) {
+    wgpuInstanceRelease(instance);
   }
 }
 void WebGPURenderer::Initialize(void *window) {
@@ -60,7 +57,7 @@ void WebGPURenderer::CreateSurface(void *window) {
   surfaceDescriptor.nextInChain = &fromCanvasHTMLSelector.chain;
   surfaceDescriptor.label = NULL;
 
-  m_surface = wgpuInstanceCreateSurface(m_instance, &surfaceDescriptor);
+  surface = wgpuInstanceCreateSurface(instance, &surfaceDescriptor);
 #endif
 #ifdef _WIN32
   {
@@ -78,24 +75,24 @@ void WebGPURenderer::CreateSurface(void *window) {
         .hwnd = hwnd};
     auto descriptor =
         WGPUSurfaceDescriptor{.nextInChain = &desc.chain, .label = NULL};
-    m_surface = wgpuInstanceCreateSurface(m_instance, &descriptor);
+    surface = wgpuInstanceCreateSurface(instance, &descriptor);
   }
 #endif
-  std::cout << "Surface: " << m_surface << std::endl;
+  std::cout << "Surface: " << surface << std::endl;
 }
 void WebGPURenderer::CreateInstance() {
 #ifdef EMSCRIPTEN
-  m_instance = wgpuCreateInstance(nullptr);
+  instance = wgpuCreateInstance(nullptr);
 #else
   WGPUInstanceDescriptor desc = {};
   desc.nextInChain = nullptr;
-  m_instance = wgpuCreateInstance(&desc);
+  instance = wgpuCreateInstance(&desc);
 #endif
 
-  if (!m_instance) {
+  if (!instance) {
     std::cerr << "Could not initialize WebGPU!" << std::endl;
   }
-  std::cout << "WGPU instance: " << m_instance << std::endl;
+  std::cout << "WGPU instance: " << instance << std::endl;
 }
 void WebGPURenderer::CreateAdapter() {
   struct UserData {
@@ -114,7 +111,7 @@ void WebGPURenderer::CreateAdapter() {
     }
   };
   UserData userData{};
-  wgpuInstanceRequestAdapter(m_instance, nullptr, onAdapterRequestEnded,
+  wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded,
                              &userData);
 #ifdef __EMSCRIPTEN__
   while (!userData.adapterRequested) {
@@ -122,7 +119,7 @@ void WebGPURenderer::CreateAdapter() {
   }
 #endif // __EMSCRIPTEN__
   std::cout << "Adapter: " << userData.adapter << std::endl;
-  m_adapter = userData.adapter;
+  adapter = userData.adapter;
 }
 void WebGPURenderer::CreateDevice() {
   struct UserData {
@@ -152,7 +149,7 @@ void WebGPURenderer::CreateDevice() {
     std::cout << std::endl;
   };
 
-  wgpuAdapterRequestDevice(m_adapter, &descriptor, onDeviceRequestEnded,
+  wgpuAdapterRequestDevice(adapter, &descriptor, onDeviceRequestEnded,
                            (void *)&userData);
 
 #ifdef __EMSCRIPTEN__
@@ -161,7 +158,7 @@ void WebGPURenderer::CreateDevice() {
   }
 #endif // __EMSCRIPTEN__
   std::cout << "Device: " << userData.device << std::endl;
-  m_device = userData.device;
+  device = userData.device;
   auto onDeviceError = [](WGPUErrorType type, char const *message,
                           void * /* pUserData */) {
     std::cout << "Uncaptured device error: type " << type;
@@ -169,10 +166,10 @@ void WebGPURenderer::CreateDevice() {
       std::cout << " (" << message << ")";
     std::cout << std::endl;
   };
-  wgpuDeviceSetUncapturedErrorCallback(m_device, onDeviceError,
+  wgpuDeviceSetUncapturedErrorCallback(device, onDeviceError,
                                        nullptr /* pUserData */);
 }
-void WebGPURenderer::CreateQueue() { m_queue = wgpuDeviceGetQueue(m_device); }
+void WebGPURenderer::CreateQueue() { queue = wgpuDeviceGetQueue(device); }
 void WebGPURenderer::ConfigSurface() {
   WGPUSurfaceConfiguration config = {};
   config.nextInChain = nullptr;
@@ -180,22 +177,22 @@ void WebGPURenderer::ConfigSurface() {
   config.width = 640;
   config.height = 480;
   config.usage = WGPUTextureUsage_RenderAttachment;
-  m_surfaceFormat = WGPUTextureFormat_BGRA8UnormSrgb;
-  m_surfaceFormat = wgpuSurfaceGetPreferredFormat(m_surface, m_adapter);
-  m_surfaceFormat = WGPUTextureFormat_RGBA8Unorm;
-  std::cout << "Surface format: " << m_surfaceFormat << std::endl;
-  config.format = m_surfaceFormat;
+  surfaceFormat = WGPUTextureFormat_BGRA8UnormSrgb;
+  surfaceFormat = wgpuSurfaceGetPreferredFormat(surface, adapter);
+  surfaceFormat = WGPUTextureFormat_RGBA8Unorm;
+  std::cout << "Surface format: " << surfaceFormat << std::endl;
+  config.format = surfaceFormat;
   config.viewFormatCount = 0;
   config.viewFormats = nullptr;
-  config.device = m_device;
+  config.device = device;
   config.presentMode = WGPUPresentMode_Fifo;
   config.alphaMode = WGPUCompositeAlphaMode_Auto;
-  wgpuSurfaceConfigure(m_surface, &config);
+  wgpuSurfaceConfigure(surface, &config);
 }
 WGPUTextureView WebGPURenderer::GetNextSurfaceTextureView() {
 
   WGPUSurfaceTexture surfaceTexture;
-  wgpuSurfaceGetCurrentTexture(m_surface, &surfaceTexture);
+  wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);
   if (surfaceTexture.status != WGPUSurfaceGetCurrentTextureStatus_Success) {
     return nullptr;
   }
@@ -214,7 +211,7 @@ WGPUTextureView WebGPURenderer::GetNextSurfaceTextureView() {
   return targetView;
 }
 void WebGPURenderer::Render() {
-  if (!m_surface) {
+  if (!surface) {
     std::cout << "Surface is not created!" << std::endl;
     return;
   }
@@ -228,7 +225,7 @@ void WebGPURenderer::Render() {
   WGPUCommandEncoderDescriptor encoderDesc{};
   encoderDesc.nextInChain = nullptr;
   WGPUCommandEncoder encoder =
-      wgpuDeviceCreateCommandEncoder(m_device, &encoderDesc);
+      wgpuDeviceCreateCommandEncoder(device, &encoderDesc);
 
   // Create the render pass that clear the screen with our color
   WGPURenderPassColorAttachment colorAttachment{};
@@ -251,7 +248,7 @@ void WebGPURenderer::Render() {
       wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
 
   // Set the pipeline and draw
-  wgpuRenderPassEncoderSetPipeline(renderPass, m_pipeline);
+  wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
   wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
 
   wgpuRenderPassEncoderEnd(renderPass);
@@ -264,11 +261,11 @@ void WebGPURenderer::Render() {
       wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
   wgpuCommandEncoderRelease(encoder);
 
-  wgpuQueueSubmit(m_queue, 1, &cmdBuffer);
+  wgpuQueueSubmit(queue, 1, &cmdBuffer);
   wgpuCommandBufferRelease(cmdBuffer);
   wgpuTextureViewRelease(targetView);
 #ifndef __EMSCRIPTEN__
-  wgpuSurfacePresent(m_surface);
+  wgpuSurfacePresent(surface);
 #endif
 }
 void WebGPURenderer::InitializePipeline() {
@@ -301,7 +298,7 @@ fn fs_main() -> @location(0) vec4f {
 }
 )";
   WGPUShaderModule shaderModule =
-      wgpuDeviceCreateShaderModule(m_device, &shaderDesc);
+      wgpuDeviceCreateShaderModule(device, &shaderDesc);
 
   WGPURenderPipelineDescriptor pipelineDesc{};
   pipelineDesc.nextInChain = nullptr;
@@ -333,7 +330,7 @@ fn fs_main() -> @location(0) vec4f {
   blendState.alpha.operation = WGPUBlendOperation_Add;
 
   WGPUColorTargetState colorTarget{};
-  colorTarget.format = m_surfaceFormat;
+  colorTarget.format = surfaceFormat;
   colorTarget.blend = &blendState;
   colorTarget.writeMask = WGPUColorWriteMask_All; // We could write to only some
                                                   // of the color channels.
@@ -358,7 +355,7 @@ fn fs_main() -> @location(0) vec4f {
 
   pipelineDesc.layout = nullptr;
 
-  m_pipeline = wgpuDeviceCreateRenderPipeline(m_device, &pipelineDesc);
+  pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
 
   // We no longer need to access the shader module
   wgpuShaderModuleRelease(shaderModule);
