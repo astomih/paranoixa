@@ -28,17 +28,19 @@ void Application::ImplementDeleter::operator()(Implement *implement) {
 }
 void Application::Initialize(GraphicsAPI api) {
   implement = std::unique_ptr<Implement, ImplementDeleter>(new Implement());
+#ifndef __EMSCRIPTEN__
   switch (api) {
   case GraphicsAPI::WebGPU: {
     implement->renderer = std::make_unique<WebGPURenderer>();
     break;
   }
   case GraphicsAPI::Vulkan:
-#ifndef __EMSCRIPTEN__
     implement->renderer = std::make_unique<VulkanRenderer>();
-#endif
     break;
   }
+#else
+  implement->renderer = std::make_unique<WebGPURenderer>();
+#endif
 
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
@@ -61,7 +63,13 @@ void Application::Initialize(GraphicsAPI api) {
   implement->window =
       SDL_CreateWindow(windowName.c_str(), 640, 480, windowFlags);
   implement->renderer->Initialize(implement->window);
-#ifdef __EMSCRIPTEN__
+}
+void Application::Run() {
+#ifndef __EMSCRIPTEN__
+  while (this->IsRunning()) {
+    this->Loop();
+  }
+#else
   emscripten_set_main_loop_arg(
       [](void *userData) {
         Application *app = reinterpret_cast<Application *>(userData);
@@ -69,13 +77,6 @@ void Application::Initialize(GraphicsAPI api) {
       },
       this, 0, 1);
 #endif // __EMSCRIPTEN__
-}
-void Application::Run() {
-#ifndef __EMSCRIPTEN__
-  while (this->IsRunning()) {
-    this->Loop();
-  }
-#endif
 }
 bool Application::IsRunning() { return implement->running; }
 void Application::Loop() {
