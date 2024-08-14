@@ -27,21 +27,21 @@ private:
   WGPUTextureView GetNextSurfaceTextureView();
 
   // WebGPU instance
-  WGPUInstance m_instance;
+  WGPUInstance instance;
   // WebGPU adapter
-  WGPUAdapter m_adapter;
+  WGPUAdapter adapter;
   // WebGPU device
-  WGPUDevice m_device;
+  WGPUDevice device;
   // WebGPU queue
-  WGPUQueue m_queue;
+  WGPUQueue queue;
   // WebGPU surface
-  WGPUSurface m_surface;
+  WGPUSurface surface;
   // WebGPU surface texture view
-  WGPUTextureView m_targetView;
+  WGPUTextureView targetView;
 
-  WGPUTextureFormat m_surfaceFormat;
+  WGPUTextureFormat surfaceFormat;
 
-  WGPURenderPipeline m_pipeline;
+  WGPURenderPipeline pipeline;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_WEBGPU_RENDERER_HPP
