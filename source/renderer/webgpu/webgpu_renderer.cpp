@@ -7,6 +7,12 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_system.h>
+
+#include <imgui.h>
+
+#include <backends/imgui_impl_sdl3.h>
+#include <backends/imgui_impl_wgpu.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -43,6 +49,17 @@ void WebGPURenderer::Initialize(void *window) {
   CreateSurface(window);
   ConfigSurface();
   InitializePipeline();
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+  (void)io;
+  ImGui::StyleColorsDark();
+  ImGui_ImplSDL3_InitForOther((SDL_Window *)window);
+  ImGui_ImplWGPU_InitInfo init_info{};
+  init_info.Device = device;
+  init_info.RenderTargetFormat = surfaceFormat;
+  ImGui_ImplWGPU_Init(&init_info);
+
   std::cout << "WebGPU renderer initialized!" << std::endl;
 }
 void WebGPURenderer::CreateSurface(void *window) {
@@ -61,9 +78,9 @@ void WebGPURenderer::CreateSurface(void *window) {
 #endif
 #ifdef _WIN32
   {
-    HWND hwnd =
-        (HWND)SDL_GetProperty(SDL_GetWindowProperties((::SDL_Window *)window),
-                              SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+    HWND hwnd = (HWND)SDL_GetPointerProperty(
+        SDL_GetWindowProperties((::SDL_Window *)window),
+        SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
     HINSTANCE hinstance = GetModuleHandle(NULL);
     WGPUSurfaceDescriptorFromWindowsHWND desc{
         .chain =
@@ -251,6 +268,14 @@ void WebGPURenderer::Render() {
   wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
   wgpuRenderPassEncoderDraw(renderPass, 3, 1, 0, 0);
 
+  ImGui_ImplWGPU_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
+  ImGui::ShowDemoWindow();
+  ImGui::Begin("Hello, world!");
+  ImGui::End();
+  ImGui::Render();
+  ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
   wgpuRenderPassEncoderEnd(renderPass);
   wgpuRenderPassEncoderReference(renderPass);
 

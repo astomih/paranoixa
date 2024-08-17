@@ -5,7 +5,6 @@
 #include "../renderer.hpp"
 
 #include <vector>
-#include <volk.h>
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
@@ -84,6 +83,7 @@ private:
   int currentFrameIndex = 0;
   uint32_t swapchainImageIndex = 0;
 };
+VulkanRenderer &GetVulkanRenderer();
 } // namespace paranoixa
 #endif // __EMSCRIPTEN__
 #endif // PARANOIXA_VULKAN_RENDERER_HPP

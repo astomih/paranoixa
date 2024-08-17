@@ -9,10 +9,16 @@ include(webgpu.cmake)
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 find_package(Vulkan)
 
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+
+# Imgui settings
+set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES")
+
 if(WIN32)
-  set(CMAKE_CXX_FLAGS "-g -O0")
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/library/imgui
     ${CMAKE_SOURCE_DIR}/library/SDL/include
     ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
@@ -23,7 +29,8 @@ endif()
 
 if(EMSCRIPTEN)
   include_directories(
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/library/imgui
+    ${CMAKE_SOURCE_DIR}/include/paranoixa
   )
 endif()
 
@@ -38,6 +45,9 @@ if(EMSCRIPTEN)
     SOURCE_FILES
     ${SOURCE_FILES}
     source/renderer/webgpu/*.cpp
+    library/imgui/*.cpp
+    library/imgui/backends/imgui_impl_sdl3.cpp
+    library/imgui/backends/imgui_impl_wgpu.cpp
   )
 endif()
 
@@ -47,6 +57,10 @@ if(WIN32)
     ${SOURCE_FILES}
     library/*.c
     library/*.cpp
+    library/imgui/*.cpp
+    library/imgui/backends/imgui_impl_sdl3.cpp
+    library/imgui/backends/imgui_impl_vulkan.cpp
+    library/imgui/backends/imgui_impl_wgpu.cpp
     source/*/*/*.cpp
   )
 endif()

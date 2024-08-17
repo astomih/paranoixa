@@ -1,12 +1,23 @@
-#include "vulkan_renderer.hpp"
+#include "imgui.h"
 
+#define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
+#define IMGUI_IMPL_VULKAN_USE_VOLK
+#define VK_NO_PROTOTYPES
+#include "backends/imgui_impl_vulkan.h"
+
+#include "backends/imgui_impl_sdl3.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+
+#define VOLK_IMPLEMENTATION
+#include <volk.h>
 
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <fstream>
+
+#include "vulkan_renderer.hpp"
 namespace paranoixa {
 
 static std::unique_ptr<FileLoader> gFileLoader = nullptr;
@@ -86,6 +97,47 @@ void VulkanRenderer::Initialize(void *window) {
   CreateDescriptorPool();
   CreateSemaphores();
   CreateCommandBuffers();
+
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+  (void)io;
+  io.ConfigFlags |=
+      ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Control
+  ImGui_ImplSDL3_InitForVulkan(sdlWindow);
+  ImGui_ImplVulkan_LoadFunctions([](const char *functionName, void *userArgs) {
+    auto &dev = GetVulkanRenderer();
+    auto vkDevice = dev.device;
+    auto vkInstance = dev.instance;
+    auto devFuncAddr = vkGetDeviceProcAddr(vkDevice, functionName);
+    if (devFuncAddr != nullptr) {
+      return devFuncAddr;
+    }
+    auto instanceFuncAddr = vkGetInstanceProcAddr(vkInstance, functionName);
+    return instanceFuncAddr;
+  });
+  ImGui_ImplVulkan_InitInfo vulkanInfo{
+      .Instance = instance,
+      .PhysicalDevice = physicalDevice,
+      .Device = device,
+      .QueueFamily = graphicsQueueIndex,
+      .Queue = graphicsQueue,
+      .DescriptorPool = descriptorPool,
+      .RenderPass = VK_NULL_HANDLE,
+      .MinImageCount = MAX_FRAMES_IN_FLIGHT,
+      .ImageCount = MAX_FRAMES_IN_FLIGHT,
+      .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+  };
+  vulkanInfo.UseDynamicRendering = true;
+  vulkanInfo.PipelineRenderingCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+      .colorAttachmentCount = 1,
+      .pColorAttachmentFormats = &surfaceFormat.format,
+      .depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+  };
+
+  ImGui_ImplVulkan_Init(&vulkanInfo);
   PrepareTriangle();
 }
 void VulkanRenderer::Render() {
@@ -147,7 +199,17 @@ void VulkanRenderer::ProcessFrame() {
                          vertexOffsets);
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
+  ImGui_ImplSDL3_NewFrame();
+  ImGui_ImplVulkan_NewFrame();
+  ImGui::NewFrame();
+  ImGui::ShowDemoWindow();
+  ImGui::Begin("Hello, world!");
+  ImGui::End();
+  ImGui::Render();
+  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+
   vkCmdEndRendering(commandBuffer);
+
   TransitionLayoutSwapchainImage(commandBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                  VK_ACCESS_2_NONE);
   Submit();

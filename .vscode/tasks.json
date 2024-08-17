@@ -6,7 +6,7 @@
     {
       "label": "build_wasm_wgpu",
       "type": "shell",
-      "command": "cd build/wasm && emcmake cmake -DWEBGPU_BACKEND=EMSCRIPTEN ../.. && ninja",
+      "command": "cd build/wasm && emcmake cmake -DWEBGPU_BACKEND=EMSCRIPTEN -DCMAKE_BUILD_TYPE=Debug ../.. && ninja",
       "group": {
         "kind": "build",
       },
@@ -23,7 +23,7 @@
     {
       "label": "build_native",
       "type": "shell",
-      "command": "cd build && cmake -DWEBGPU_BACKEND=WGPU .. && ninja",
+      "command": "cd build && cmake -DWEBGPU_BACKEND=WGPU -DCMAKE_BUILD_TYPE=Debug .. && ninja",
       "group": {
         "kind": "build",
         "isDefault": true

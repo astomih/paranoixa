@@ -9,12 +9,17 @@
 #include <iostream>
 #include <memory>
 namespace paranoixa {
+std::unique_ptr<class Renderer> renderer;
+#ifndef __EMSCRIPTEN__
+VulkanRenderer &GetVulkanRenderer() {
+  return dynamic_cast<VulkanRenderer &>(*renderer);
+}
+#endif
 Application::~Application() {}
 class Application::Implement {
 public:
   Implement() = default;
   ~Implement();
-  std::unique_ptr<class Renderer> renderer;
   ::SDL_Window *window;
   bool running = true;
 };
@@ -31,18 +36,18 @@ void Application::Initialize(GraphicsAPI api) {
 #ifndef __EMSCRIPTEN__
   switch (api) {
   case GraphicsAPI::WebGPU: {
-    implement->renderer = std::make_unique<WebGPURenderer>();
+    renderer = std::make_unique<WebGPURenderer>();
     break;
   }
   case GraphicsAPI::Vulkan:
-    implement->renderer = std::make_unique<VulkanRenderer>();
+    renderer = std::make_unique<VulkanRenderer>();
     break;
   }
 #else
-  implement->renderer = std::make_unique<WebGPURenderer>();
+  renderer = std::make_unique<WebGPURenderer>();
 #endif
 
-  if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+  if (SDL_Init(SDL_INIT_EVENTS) != 0) {
     std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
   }
   uint32_t windowFlags = 0;
@@ -62,7 +67,7 @@ void Application::Initialize(GraphicsAPI api) {
 #endif // __EMSCRIPTEN__
   implement->window =
       SDL_CreateWindow(windowName.c_str(), 640, 480, windowFlags);
-  implement->renderer->Initialize(implement->window);
+  renderer->Initialize(implement->window);
 }
 void Application::Run() {
 #ifndef __EMSCRIPTEN__
@@ -86,6 +91,6 @@ void Application::Loop() {
       implement->running = false;
     }
   }
-  implement->renderer->Render();
+  renderer->Render();
 }
 } // namespace paranoixa
