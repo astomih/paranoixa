@@ -13,10 +13,7 @@ if(WIN32)
   set(CMAKE_CXX_FLAGS "-g -O0")
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
-<<<<<<< Updated upstream
-=======
     ${CMAKE_SOURCE_DIR}/library/imgui
->>>>>>> Stashed changes
     ${CMAKE_SOURCE_DIR}/library/SDL/include
     ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
@@ -27,10 +24,7 @@ endif()
 
 if(EMSCRIPTEN)
   include_directories(
-<<<<<<< Updated upstream
-=======
     ${CMAKE_SOURCE_DIR}/library/imgui
->>>>>>> Stashed changes
     ${CMAKE_SOURCE_DIR}/include
   )
 endif()
