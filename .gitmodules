@@ -1,3 +1,9 @@
 [submodule "library/SDL"]
 	path = library/SDL
 	url = https://github.com/libsdl-org/SDL
+<<<<<<< Updated upstream
+=======
+[submodule "library/imgui"]
+	path = library/imgui
+	url = https://github.com/ocornut/imgui
+>>>>>>> Stashed changes
