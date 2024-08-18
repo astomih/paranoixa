@@ -47,8 +47,9 @@ void Application::Initialize(GraphicsAPI api) {
   renderer = std::make_unique<WebGPURenderer>();
 #endif
 
-  if (SDL_Init(SDL_INIT_EVENTS) != 0) {
-    std::cerr << "Could not initialize SDL: " << SDL_GetError() << std::endl;
+  if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_TIMER) != 0) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
+                 SDL_GetError());
   }
   uint32_t windowFlags = 0;
 #ifdef __EMSCRIPTEN__
@@ -87,6 +88,7 @@ bool Application::IsRunning() { return implement->running; }
 void Application::Loop() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
+    renderer->ProcessEvent(&event);
     if (event.type == SDL_EVENT_QUIT) {
       implement->running = false;
     }

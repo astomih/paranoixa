@@ -64,6 +64,10 @@ VulkanRenderer::VulkanRenderer()
 VulkanRenderer::~VulkanRenderer() { Finalize(); }
 void VulkanRenderer::Finalize() {
   vkDeviceWaitIdle(device);
+
+  ImGui_ImplVulkan_Shutdown();
+  ImGui_ImplSDL3_Shutdown();
+  ImGui::DestroyContext();
   vkDestroyBuffer(device, vertexBuffer.buffer, nullptr);
   vkFreeMemory(device, vertexBuffer.memory, nullptr);
   for (auto &state : swapchainState) {
@@ -105,6 +109,8 @@ void VulkanRenderer::Initialize(void *window) {
   io.ConfigFlags |=
       ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Control
+  io.WantCaptureMouse = true;
+  ImGui::StyleColorsDark();
   ImGui_ImplSDL3_InitForVulkan(sdlWindow);
   ImGui_ImplVulkan_LoadFunctions([](const char *functionName, void *userArgs) {
     auto &dev = GetVulkanRenderer();
@@ -139,6 +145,9 @@ void VulkanRenderer::Initialize(void *window) {
 
   ImGui_ImplVulkan_Init(&vulkanInfo);
   PrepareTriangle();
+}
+void VulkanRenderer::ProcessEvent(void *event) {
+  ImGui_ImplSDL3_ProcessEvent(static_cast<SDL_Event *>(event));
 }
 void VulkanRenderer::Render() {
   this->NewFrame();

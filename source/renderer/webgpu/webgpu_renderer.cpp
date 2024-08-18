@@ -23,6 +23,10 @@
 namespace paranoixa {
 WebGPURenderer::WebGPURenderer() {}
 WebGPURenderer::~WebGPURenderer() {
+  ImGui_ImplWGPU_Shutdown();
+  ImGui_ImplSDL3_Shutdown();
+  ImGui::DestroyContext();
+  wgpuRenderPipelineRelease(pipeline);
 #ifndef __EMSCRIPTEN__
   if (surface) {
     wgpuSurfaceRelease(surface);
@@ -53,6 +57,9 @@ void WebGPURenderer::Initialize(void *window) {
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
+  io.ConfigFlags |=
+      ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Control
   ImGui::StyleColorsDark();
   ImGui_ImplSDL3_InitForOther((SDL_Window *)window);
   ImGui_ImplWGPU_InitInfo init_info{};
@@ -61,6 +68,9 @@ void WebGPURenderer::Initialize(void *window) {
   ImGui_ImplWGPU_Init(&init_info);
 
   std::cout << "WebGPU renderer initialized!" << std::endl;
+}
+void WebGPURenderer::ProcessEvent(void *event) {
+  ImGui_ImplSDL3_ProcessEvent((SDL_Event *)event);
 }
 void WebGPURenderer::CreateSurface(void *window) {
 #ifdef __EMSCRIPTEN__
@@ -271,6 +281,8 @@ void WebGPURenderer::Render() {
   ImGui_ImplWGPU_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
+  ImGuiIO &io = ImGui::GetIO();
+  std::cout << io.MouseDown[0] << std::endl;
   ImGui::ShowDemoWindow();
   ImGui::Begin("Hello, world!");
   ImGui::End();
