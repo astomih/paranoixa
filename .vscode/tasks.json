@@ -23,7 +23,7 @@
     {
       "label": "build_native",
       "type": "shell",
-      "command": "cd build && cmake -DWEBGPU_BACKEND=WGPU -DCMAKE_BUILD_TYPE=Debug .. && ninja",
+      "command": "cd build && cmake -DWEBGPU_BACKEND=WGPU -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && ninja",
       "group": {
         "kind": "build",
         "isDefault": true

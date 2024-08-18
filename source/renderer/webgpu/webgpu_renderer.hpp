@@ -11,6 +11,7 @@ public:
   WebGPURenderer();
   ~WebGPURenderer();
   void Initialize(void *window) override;
+  void ProcessEvent(void *event) override;
   void Render() override;
 
 private:
