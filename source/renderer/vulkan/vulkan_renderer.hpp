@@ -7,6 +7,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vma.hpp"
+
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -32,6 +34,7 @@ private:
   void CreateDevice();
   void CreateSurface(void *window);
   void RecreateSwapchain(int width, int height);
+  void CreateAllocator();
   void CreateCommandPool();
   void CreateDescriptorPool();
   void CreateSemaphores();
@@ -64,6 +67,7 @@ private:
   };
   VkSwapchainKHR swapchain;
   std::vector<SwapchainState> swapchainState;
+  VmaAllocator allocator;
   VkCommandPool commandPool;
   VkDescriptorPool descriptorPool;
   VkPipelineLayout pipelineLayout;
@@ -76,7 +80,7 @@ private:
   };
   struct VertexBuffer {
     VkBuffer buffer;
-    VkDeviceMemory memory;
+    VmaAllocation memory;
   } vertexBuffer;
   int width, height;
   static constexpr size_t MAX_FRAMES_IN_FLIGHT = 2;

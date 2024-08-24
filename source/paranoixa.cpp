@@ -67,7 +67,7 @@ void Application::Initialize(GraphicsAPI api) {
   }
 #endif // __EMSCRIPTEN__
   implement->window =
-      SDL_CreateWindow(windowName.c_str(), 640, 480, windowFlags);
+      SDL_CreateWindow(windowName.c_str(), 1280, 720, windowFlags);
   renderer->Initialize(implement->window);
 }
 void Application::Run() {

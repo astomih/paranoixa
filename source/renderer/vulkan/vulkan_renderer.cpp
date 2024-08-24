@@ -69,7 +69,7 @@ void VulkanRenderer::Finalize() {
   ImGui_ImplSDL3_Shutdown();
   ImGui::DestroyContext();
   vkDestroyBuffer(device, vertexBuffer.buffer, nullptr);
-  vkFreeMemory(device, vertexBuffer.memory, nullptr);
+  vmaFreeMemory(allocator, vertexBuffer.memory);
   for (auto &state : swapchainState) {
     vkDestroyImageView(device, state.view, nullptr);
   }
@@ -82,6 +82,7 @@ void VulkanRenderer::Finalize() {
   }
   vkDestroyDescriptorPool(device, descriptorPool, nullptr);
   vkDestroyCommandPool(device, commandPool, nullptr);
+  vmaDestroyAllocator(allocator);
   vkDestroySwapchainKHR(device, swapchain, nullptr);
   SDL_Vulkan_DestroySurface(instance, surface, nullptr);
   vkDestroyDevice(device, nullptr);
@@ -489,6 +490,16 @@ void VulkanRenderer::RecreateSwapchain(int width, int height) {
   }
   assert(supportPresent[graphicsQueueIndex] == VK_TRUE);
 }
+void VulkanRenderer::CreateAllocator() {
+  VmaAllocatorCreateInfo allocatorCreateInfo{
+      .physicalDevice = physicalDevice,
+      .device = device,
+      .instance = this->instance,
+      .vulkanApiVersion = VK_API_VERSION_1_3,
+  };
+  assert(vmaCreateAllocator(&allocatorCreateInfo, &this->allocator) ==
+         VK_SUCCESS);
+}
 void VulkanRenderer::CreateCommandPool() {
   VkCommandPoolCreateInfo commandPoolCreateInfo{
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -551,22 +562,31 @@ void VulkanRenderer::PrepareTriangle() {
       .size = uint32_t(sizeof(triangleVerts)),
       .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
   };
+  VmaAllocationCreateInfo allocationInfo{};
+  allocationInfo.usage = VMA_MEMORY_USAGE_AUTO,
+  allocationInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  allocationInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+  vmaCreateBuffer(allocator, &bufferCI, &allocationInfo, &vertexBuffer.buffer,
+                  &vertexBuffer.memory, nullptr);
   vkCreateBuffer(device, &bufferCI, nullptr, &vertexBuffer.buffer);
   VkMemoryRequirements reqs;
   vkGetBufferMemoryRequirements(device, vertexBuffer.buffer, &reqs);
-  VkMemoryAllocateInfo memoryAllocateInfo{
-      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-      .allocationSize = reqs.size,
-      .memoryTypeIndex =
-          GetMemoryTypeIndex(reqs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)};
-  vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &vertexBuffer.memory);
-  vkBindBufferMemory(device, vertexBuffer.buffer, vertexBuffer.memory, 0);
+  VmaAllocationCreateInfo memoryAllocateInfo{};
+  memoryAllocateInfo.usage = VMA_MEMORY_USAGE_AUTO,
+  memoryAllocateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  memoryAllocateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+  vmaAllocateMemory(allocator, &reqs, &memoryAllocateInfo, &vertexBuffer.memory,
+                    nullptr);
+  vmaBindBufferMemory2(allocator, vertexBuffer.memory, 0, vertexBuffer.buffer,
+                       nullptr);
 
   void *mapped;
-  vkMapMemory(device, vertexBuffer.memory, 0, VK_WHOLE_SIZE, 0, &mapped);
+  vmaMapMemory(allocator, vertexBuffer.memory, &mapped);
   memcpy(mapped, triangleVerts, sizeof(triangleVerts));
-  vkUnmapMemory(device, vertexBuffer.memory);
+  vmaUnmapMemory(allocator, vertexBuffer.memory);
 
   VkPipelineLayoutCreateInfo layoutCI{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
