@@ -68,8 +68,9 @@ void VulkanRenderer::Finalize() {
   ImGui_ImplVulkan_Shutdown();
   ImGui_ImplSDL3_Shutdown();
   ImGui::DestroyContext();
-  vkDestroyBuffer(device, vertexBuffer.buffer, nullptr);
-  vmaFreeMemory(allocator, vertexBuffer.memory);
+  vmaDestroyBuffer(allocator, vertexBuffer.buffer, vertexBuffer.memory);
+  vertexBuffer.buffer = VK_NULL_HANDLE;
+  vertexBuffer.memory = VK_NULL_HANDLE;
   for (auto &state : swapchainState) {
     vkDestroyImageView(device, state.view, nullptr);
   }
@@ -97,7 +98,7 @@ void VulkanRenderer::Initialize(void *window) {
   CreateSurface(window);
 
   RecreateSwapchain(width, height);
-
+  CreateAllocator();
   CreateCommandPool();
   CreateDescriptorPool();
   CreateSemaphores();
@@ -491,9 +492,35 @@ void VulkanRenderer::RecreateSwapchain(int width, int height) {
   assert(supportPresent[graphicsQueueIndex] == VK_TRUE);
 }
 void VulkanRenderer::CreateAllocator() {
+  VmaVulkanFunctions vmaVulkanFunctions{};
+  vmaVulkanFunctions.vkAllocateMemory = vkAllocateMemory;
+  vmaVulkanFunctions.vkBindBufferMemory = vkBindBufferMemory;
+  vmaVulkanFunctions.vkBindImageMemory = vkBindImageMemory;
+  vmaVulkanFunctions.vkCreateBuffer = vkCreateBuffer;
+  vmaVulkanFunctions.vkCreateImage = vkCreateImage;
+  vmaVulkanFunctions.vkDestroyBuffer = vkDestroyBuffer;
+  vmaVulkanFunctions.vkDestroyImage = vkDestroyImage;
+  vmaVulkanFunctions.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+  vmaVulkanFunctions.vkFreeMemory = vkFreeMemory;
+  vmaVulkanFunctions.vkGetBufferMemoryRequirements =
+      vkGetBufferMemoryRequirements;
+  vmaVulkanFunctions.vkGetImageMemoryRequirements =
+      vkGetImageMemoryRequirements;
+  vmaVulkanFunctions.vkGetPhysicalDeviceMemoryProperties =
+      vkGetPhysicalDeviceMemoryProperties;
+  vmaVulkanFunctions.vkGetPhysicalDeviceProperties =
+      vkGetPhysicalDeviceProperties;
+  vmaVulkanFunctions.vkInvalidateMappedMemoryRanges =
+      vkInvalidateMappedMemoryRanges;
+  vmaVulkanFunctions.vkMapMemory = vkMapMemory;
+  vmaVulkanFunctions.vkUnmapMemory = vkUnmapMemory;
+  vmaVulkanFunctions.vkCmdCopyBuffer = vkCmdCopyBuffer;
+  vmaVulkanFunctions.vkGetBufferMemoryRequirements2KHR =
+      vkGetBufferMemoryRequirements2;
   VmaAllocatorCreateInfo allocatorCreateInfo{
       .physicalDevice = physicalDevice,
       .device = device,
+      .pVulkanFunctions = &vmaVulkanFunctions,
       .instance = this->instance,
       .vulkanApiVersion = VK_API_VERSION_1_3,
   };
@@ -557,36 +584,22 @@ void VulkanRenderer::PrepareTriangle() {
   float triangleVerts[] = {0.5f,  0.5f,  0.5f, 0, 0, 1,
                            0.0f,  -0.5f, 0.5f, 0, 1, 0,
                            -0.5f, 0.5f,  0.5f, 1, 0, 0};
-  VkBufferCreateInfo bufferCI{
-      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-      .size = uint32_t(sizeof(triangleVerts)),
-      .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-  };
-  VmaAllocationCreateInfo allocationInfo{};
-  allocationInfo.usage = VMA_MEMORY_USAGE_AUTO,
-  allocationInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  allocationInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+  VkBufferCreateInfo bufferCI{.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                              .size = uint32_t(sizeof(triangleVerts)),
+                              .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
+  VmaAllocationCreateInfo allocationCreateInfo{};
+  allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+  allocationCreateInfo.flags =
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
+      VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-  vmaCreateBuffer(allocator, &bufferCI, &allocationInfo, &vertexBuffer.buffer,
-                  &vertexBuffer.memory, nullptr);
-  vkCreateBuffer(device, &bufferCI, nullptr, &vertexBuffer.buffer);
-  VkMemoryRequirements reqs;
-  vkGetBufferMemoryRequirements(device, vertexBuffer.buffer, &reqs);
-  VmaAllocationCreateInfo memoryAllocateInfo{};
-  memoryAllocateInfo.usage = VMA_MEMORY_USAGE_AUTO,
-  memoryAllocateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  memoryAllocateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-  vmaAllocateMemory(allocator, &reqs, &memoryAllocateInfo, &vertexBuffer.memory,
-                    nullptr);
-  vmaBindBufferMemory2(allocator, vertexBuffer.memory, 0, vertexBuffer.buffer,
-                       nullptr);
+  VmaAllocationInfo allocationInfo{};
 
-  void *mapped;
-  vmaMapMemory(allocator, vertexBuffer.memory, &mapped);
-  memcpy(mapped, triangleVerts, sizeof(triangleVerts));
-  vmaUnmapMemory(allocator, vertexBuffer.memory);
+  vmaCreateBuffer(allocator, &bufferCI, &allocationCreateInfo,
+                  &vertexBuffer.buffer, &vertexBuffer.memory, &allocationInfo);
+
+  memcpy(allocationInfo.pMappedData, triangleVerts, sizeof(triangleVerts));
 
   VkPipelineLayoutCreateInfo layoutCI{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
