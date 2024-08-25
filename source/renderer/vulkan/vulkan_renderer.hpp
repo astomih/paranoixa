@@ -79,6 +79,7 @@ private:
     VkCommandBuffer commandBuffer;
   };
   struct VertexBuffer {
+    VertexBuffer() : buffer(VK_NULL_HANDLE), memory(VK_NULL_HANDLE) {}
     VkBuffer buffer;
     VmaAllocation memory;
   } vertexBuffer;
