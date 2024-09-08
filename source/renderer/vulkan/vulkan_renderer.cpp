@@ -285,7 +285,7 @@ void VulkanRenderer::CreateInstance(void *window) {
     std::for_each_n(extensionNames, count,
                     [&](auto v) { extensions.push_back(v); });
   }
-#ifdef _DEBUG
+#if 1
   layers.push_back("VK_LAYER_KHRONOS_validation");
 #endif
   createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
@@ -517,6 +517,8 @@ void VulkanRenderer::CreateAllocator() {
   vmaVulkanFunctions.vkCmdCopyBuffer = vkCmdCopyBuffer;
   vmaVulkanFunctions.vkGetBufferMemoryRequirements2KHR =
       vkGetBufferMemoryRequirements2;
+  vmaVulkanFunctions.vkGetImageMemoryRequirements2KHR =
+      vkGetImageMemoryRequirements2;
   VmaAllocatorCreateInfo allocatorCreateInfo{
       .physicalDevice = physicalDevice,
       .device = device,
@@ -537,7 +539,7 @@ void VulkanRenderer::CreateCommandPool() {
                       &this->commandPool);
 }
 void VulkanRenderer::CreateDescriptorPool() {
-  constexpr uint32_t POOL_SIZE = 10000;
+  constexpr uint32_t POOL_SIZE = 256;
   VkDescriptorPoolSize poolSizes[] = {
       {.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = POOL_SIZE},
       {.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -580,6 +582,20 @@ void VulkanRenderer::CreateCommandBuffers() {
     frames[i].commandBuffer = commandBuffers[i];
   }
 }
+void VulkanRenderer::CreateSampler() {
+  VkSamplerCreateInfo samplerCI{
+      .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+      .magFilter = VK_FILTER_LINEAR,
+      .minFilter = VK_FILTER_LINEAR,
+      .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+      .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      .minLod = 0.0f,
+      .maxLod = VK_LOD_CLAMP_NONE,
+  };
+  vkCreateSampler(device, &samplerCI, nullptr, &sampler);
+}
 void VulkanRenderer::PrepareTriangle() {
   float triangleVerts[] = {0.5f,  0.5f,  0.5f, 0, 0, 1,
                            0.0f,  -0.5f, 0.5f, 0, 1, 0,
@@ -598,8 +614,9 @@ void VulkanRenderer::PrepareTriangle() {
 
   vmaCreateBuffer(allocator, &bufferCI, &allocationCreateInfo,
                   &vertexBuffer.buffer, &vertexBuffer.memory, &allocationInfo);
-
-  memcpy(allocationInfo.pMappedData, triangleVerts, sizeof(triangleVerts));
+  if (allocationInfo.pMappedData != nullptr) {
+    memcpy(allocationInfo.pMappedData, triangleVerts, sizeof(triangleVerts));
+  }
 
   VkPipelineLayoutCreateInfo layoutCI{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -734,6 +751,8 @@ void VulkanRenderer::PrepareTriangle() {
   for (auto &m : shaderStages) {
     DestroyShaderModule(m.module);
   }
+  std::vector<char> data = {1, 1, 1, 1};
+  CreateTexture(data.data(), data.size(), 1, 1);
 }
 VkShaderModule VulkanRenderer::CreateShaderModule(const void *code,
                                                   size_t length) {
@@ -785,5 +804,214 @@ void VulkanRenderer::TransitionLayoutSwapchainImage(
   }
   swapchainState.layout = newLayout;
   swapchainState.accessFlags = newAccessFlags;
+}
+VulkanRenderer::Texture VulkanRenderer::CreateTexture(const void *data,
+                                                      size_t size, int width,
+                                                      int height) {
+  Texture texture;
+  VmaAllocationInfo allocationInfo;
+  texture.image =
+      CreateImage(width, height, VK_FORMAT_R8G8B8A8_SRGB,
+                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                  VMA_MEMORY_USAGE_AUTO, texture.allocation, &allocationInfo);
+
+  // Copy data
+  VkBufferCreateInfo bufferCI{
+      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+      .size = size,
+      .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+  };
+  VmaAllocationCreateInfo allocationCreateInfo{};
+  allocationCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+  VmaAllocation stagingAllocation;
+  VkBuffer stagingBuffer;
+  vmaCreateBuffer(allocator, &bufferCI, &allocationCreateInfo, &stagingBuffer,
+                  &stagingAllocation, nullptr);
+  void *mappedData;
+  vmaMapMemory(allocator, stagingAllocation, &mappedData);
+  memcpy(mappedData, data, size);
+  vmaUnmapMemory(allocator, stagingAllocation);
+
+  VkCommandBufferAllocateInfo commandBufferAI{
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .commandPool = commandPool,
+      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .commandBufferCount = 1,
+  };
+  VkCommandBuffer commandBuffer;
+  vkAllocateCommandBuffers(device, &commandBufferAI, &commandBuffer);
+
+  VkCommandBufferBeginInfo commandBufferBI{
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+  };
+  vkBeginCommandBuffer(commandBuffer, &commandBufferBI);
+
+  VkImageMemoryBarrier imageBarrier{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      .srcAccessMask = 0,
+      .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+      .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+      .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image = texture.image,
+      .subresourceRange =
+          {
+              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+              .baseMipLevel = 0,
+              .levelCount = 1,
+              .baseArrayLayer = 0,
+              .layerCount = 1,
+          },
+  };
+  /*
+  vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                       VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0,
+                       nullptr, 1, &imageBarrier);
+                       */
+  TransitionLayoutImage(commandBuffer, texture.image, VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_2_NONE,
+                        VK_ACCESS_TRANSFER_WRITE_BIT,
+                        VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+                        VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT);
+
+  VkBufferImageCopy bufferImageCopy{
+
+      .bufferOffset = 0,
+      .bufferRowLength = 0,
+      .bufferImageHeight = 0,
+      .imageSubresource =
+          {
+              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+              .mipLevel = 0,
+              .baseArrayLayer = 0,
+              .layerCount = 1,
+          },
+      .imageOffset = {0, 0, 0},
+      .imageExtent = {uint32_t(width), uint32_t(height), 1},
+  };
+  vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, texture.image,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                         &bufferImageCopy);
+
+  imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  imageBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  /*
+
+  vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0,
+                       nullptr, 1, &imageBarrier);
+                       */
+  TransitionLayoutImage(
+      commandBuffer, texture.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT,
+      VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT,
+      VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT);
+
+  vkEndCommandBuffer(commandBuffer);
+
+  VkSubmitInfo submitInfo{
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &commandBuffer,
+  };
+  vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphicsQueue);
+
+  vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+  vmaDestroyBuffer(allocator, stagingBuffer, stagingAllocation);
+
+  VkImageViewCreateInfo imageViewCI{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+      .image = texture.image,
+      .viewType = VK_IMAGE_VIEW_TYPE_2D,
+      .format = VK_FORMAT_R8G8B8A8_SRGB,
+      .components =
+          {
+              VK_COMPONENT_SWIZZLE_IDENTITY,
+              VK_COMPONENT_SWIZZLE_IDENTITY,
+              VK_COMPONENT_SWIZZLE_IDENTITY,
+              VK_COMPONENT_SWIZZLE_IDENTITY,
+          },
+      .subresourceRange =
+          {
+              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+              .baseMipLevel = 0,
+              .levelCount = 1,
+              .baseArrayLayer = 0,
+              .layerCount = 1,
+          },
+  };
+  vkCreateImageView(device, &imageViewCI, nullptr, &texture.view);
+  return texture;
+}
+VkImage VulkanRenderer::CreateImage(uint32_t width, uint32_t height,
+                                    VkFormat format, VkImageUsageFlags usage,
+                                    VmaMemoryUsage memoryUsage,
+                                    VmaAllocation &allocation,
+                                    VmaAllocationInfo *allocationInfo) {
+  VkImageCreateInfo imageCI{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = format,
+      .extent = {width, height, 1},
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .tiling = VK_IMAGE_TILING_OPTIMAL,
+      .usage = usage,
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      .queueFamilyIndexCount = 0,
+      .pQueueFamilyIndices = nullptr,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+  };
+  VmaAllocationCreateInfo allocationCreateInfo{};
+  allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+  VkImage image;
+  if (vmaCreateImage(this->allocator, &imageCI, &allocationCreateInfo, &image,
+                     &allocation, allocationInfo) != VK_SUCCESS) {
+    return VK_NULL_HANDLE;
+  }
+  return image;
+}
+void VulkanRenderer::TransitionLayoutImage(
+    VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout,
+    VkImageLayout newLayout, VkAccessFlags2 oldAccessFlags,
+    VkAccessFlags2 newAccessFlags, VkPipelineStageFlags2 srcStageMask,
+    VkPipelineStageFlags2 dstStageMask) {
+  VkImageMemoryBarrier2 barrier{
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+      .pNext = nullptr,
+      .srcStageMask = srcStageMask,
+      .srcAccessMask = oldAccessFlags,
+      .dstStageMask = dstStageMask,
+      .dstAccessMask = newAccessFlags,
+      .oldLayout = oldLayout,
+      .newLayout = newLayout,
+      .image = image,
+      .subresourceRange =
+          {
+              .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+              .baseMipLevel = 0,
+              .levelCount = 1,
+              .baseArrayLayer = 0,
+              .layerCount = 1,
+          },
+  };
+
+  VkDependencyInfo info{
+      .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+      .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+      .imageMemoryBarrierCount = 1,
+      .pImageMemoryBarriers = &barrier,
+  };
+
+  if (vkCmdPipelineBarrier2) {
+    vkCmdPipelineBarrier2(commandBuffer, &info);
+  } else {
+    vkCmdPipelineBarrier2KHR(commandBuffer, &info);
+  }
 }
 } // namespace paranoixa

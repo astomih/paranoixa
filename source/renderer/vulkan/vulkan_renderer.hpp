@@ -28,6 +28,14 @@ public:
   void ProcessEvent(void *event) override;
   void Render() override;
 
+  struct Texture {
+    Texture() = default;
+    ~Texture() = default;
+    VkImage image;
+    VkImageView view;
+    VmaAllocation allocation;
+  };
+
 private:
   void Finalize();
   void CreateInstance(void *window);
@@ -39,6 +47,7 @@ private:
   void CreateDescriptorPool();
   void CreateSemaphores();
   void CreateCommandBuffers();
+  void CreateSampler();
   void PrepareTriangle();
   void NewFrame();
   void ProcessFrame();
@@ -50,7 +59,17 @@ private:
   void TransitionLayoutSwapchainImage(VkCommandBuffer commandBuffer,
                                       VkImageLayout newLayout,
                                       VkAccessFlags2 newAccessFlags);
-
+  Texture CreateTexture(const void *data, size_t size, int width, int height);
+  VkImage CreateImage(uint32_t width, uint32_t height, VkFormat format,
+                      VkImageUsageFlags usage, VmaMemoryUsage memoryUsage,
+                      VmaAllocation &allocation,
+                      VmaAllocationInfo *allocationInfo);
+  void TransitionLayoutImage(VkCommandBuffer commandBuffer, VkImage image,
+                             VkImageLayout oldLayout, VkImageLayout newLayout,
+                             VkAccessFlags2 oldAccessFlags,
+                             VkAccessFlags2 newAccessFlags,
+                             VkPipelineStageFlags2 srcStageMask,
+                             VkPipelineStageFlags2 dstStageMask);
   VkInstance instance;
   VkPhysicalDevice physicalDevice;
   VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
@@ -70,6 +89,7 @@ private:
   VmaAllocator allocator;
   VkCommandPool commandPool;
   VkDescriptorPool descriptorPool;
+  VkSampler sampler;
   VkPipelineLayout pipelineLayout;
   VkPipeline pipeline;
   struct Frame {

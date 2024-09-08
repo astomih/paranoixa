@@ -9,8 +9,10 @@ include(webgpu.cmake)
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 find_package(Vulkan)
 
+if(NOT MSVC)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+endif()
 
 # Imgui settings
 set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES")
