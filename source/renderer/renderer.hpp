@@ -1,6 +1,7 @@
 #ifndef PARANOIXA_RENDERER_HPP
 #define PARANOIXA_RENDERER_HPP
 #include <filesystem>
+#include <vector>
 namespace paranoixa {
 class FileLoader {
 public:
