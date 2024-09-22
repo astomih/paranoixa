@@ -9,17 +9,12 @@
 
 #include "vma.hpp"
 
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 namespace paranoixa {
 
-class FileLoader {
-public:
-  bool Load(std::filesystem::path filePath, std::vector<char> &fileData);
-};
-
-std::unique_ptr<FileLoader> &GetFileLoader();
 class VulkanRenderer : public Renderer {
 public:
   VulkanRenderer();
@@ -42,13 +37,17 @@ private:
   void CreateDevice();
   void CreateSurface(void *window);
   void RecreateSwapchain(int width, int height);
+  VmaVulkanFunctions GetVulkanFunctions();
   void CreateAllocator();
   void CreateCommandPool();
-  void CreateDescriptorPool();
+  void CreateDescriptorPool(VkDescriptorPool &pool);
   void CreateSemaphores();
   void CreateCommandBuffers();
   void CreateSampler();
+  void CreateDescriptorSetLayout();
+  void CreateDescriptorSet();
   void PrepareTriangle();
+  void PrepareTexture();
   void NewFrame();
   void ProcessFrame();
   void Submit();
@@ -88,8 +87,13 @@ private:
   std::vector<SwapchainState> swapchainState;
   VmaAllocator allocator;
   VkCommandPool commandPool;
+  VkDescriptorPool descriptorPoolForImGui;
   VkDescriptorPool descriptorPool;
   VkSampler sampler;
+  VkDescriptorSetLayout descriptorSetLayout;
+  VkDescriptorSet descriptorSet;
+  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+  Texture texture;
   VkPipelineLayout pipelineLayout;
   VkPipeline pipeline;
   struct Frame {
