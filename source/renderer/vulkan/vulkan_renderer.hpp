@@ -9,17 +9,12 @@
 
 #include "vma.hpp"
 
+#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 namespace paranoixa {
 
-class FileLoader {
-public:
-  bool Load(std::filesystem::path filePath, std::vector<char> &fileData);
-};
-
-std::unique_ptr<FileLoader> &GetFileLoader();
 class VulkanRenderer : public Renderer {
 public:
   VulkanRenderer();
@@ -28,18 +23,31 @@ public:
   void ProcessEvent(void *event) override;
   void Render() override;
 
+  struct Texture {
+    Texture() = default;
+    ~Texture() = default;
+    VkImage image;
+    VkImageView view;
+    VmaAllocation allocation;
+  };
+
 private:
   void Finalize();
   void CreateInstance(void *window);
   void CreateDevice();
   void CreateSurface(void *window);
   void RecreateSwapchain(int width, int height);
+  VmaVulkanFunctions GetVulkanFunctions();
   void CreateAllocator();
   void CreateCommandPool();
-  void CreateDescriptorPool();
+  void CreateDescriptorPool(VkDescriptorPool &pool);
   void CreateSemaphores();
   void CreateCommandBuffers();
+  void CreateSampler();
+  void CreateDescriptorSetLayout();
+  void CreateDescriptorSet();
   void PrepareTriangle();
+  void PrepareTexture();
   void NewFrame();
   void ProcessFrame();
   void Submit();
@@ -50,7 +58,17 @@ private:
   void TransitionLayoutSwapchainImage(VkCommandBuffer commandBuffer,
                                       VkImageLayout newLayout,
                                       VkAccessFlags2 newAccessFlags);
-
+  Texture CreateTexture(const void *data, size_t size, int width, int height);
+  VkImage CreateImage(uint32_t width, uint32_t height, VkFormat format,
+                      VkImageUsageFlags usage, VmaMemoryUsage memoryUsage,
+                      VmaAllocation &allocation,
+                      VmaAllocationInfo *allocationInfo);
+  void TransitionLayoutImage(VkCommandBuffer commandBuffer, VkImage image,
+                             VkImageLayout oldLayout, VkImageLayout newLayout,
+                             VkAccessFlags2 oldAccessFlags,
+                             VkAccessFlags2 newAccessFlags,
+                             VkPipelineStageFlags2 srcStageMask,
+                             VkPipelineStageFlags2 dstStageMask);
   VkInstance instance;
   VkPhysicalDevice physicalDevice;
   VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
@@ -69,7 +87,13 @@ private:
   std::vector<SwapchainState> swapchainState;
   VmaAllocator allocator;
   VkCommandPool commandPool;
+  VkDescriptorPool descriptorPoolForImGui;
   VkDescriptorPool descriptorPool;
+  VkSampler sampler;
+  VkDescriptorSetLayout descriptorSetLayout;
+  VkDescriptorSet descriptorSet;
+  std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+  Texture texture;
   VkPipelineLayout pipelineLayout;
   VkPipeline pipeline;
   struct Frame {

@@ -342,4 +342,3 @@ healthchecksdb
 # build
 build/
 *.dll
-*.spv

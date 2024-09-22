@@ -1,7 +1,14 @@
 #ifndef PARANOIXA_RENDERER_HPP
 #define PARANOIXA_RENDERER_HPP
-
+#include <filesystem>
 namespace paranoixa {
+class FileLoader {
+public:
+  bool Load(std::filesystem::path filePath, std::vector<char> &fileData,
+            std::ios_base::openmode openMode = std::ios::binary);
+};
+
+std::unique_ptr<FileLoader> &GetFileLoader();
 class Renderer {
 public:
   Renderer() = default;

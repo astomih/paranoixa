@@ -66,9 +66,11 @@ void Application::Initialize(GraphicsAPI api) {
     break;
   }
 #endif // __EMSCRIPTEN__
+  SDL_Surface *surface = SDL_LoadBMP("res/texture.bmp");
   implement->window =
-      SDL_CreateWindow(windowName.c_str(), 1280, 720, windowFlags);
+      SDL_CreateWindow(windowName.c_str(), surface->w, surface->h, windowFlags);
   renderer->Initialize(implement->window);
+  SDL_DestroySurface(surface);
 }
 void Application::Run() {
 #ifndef __EMSCRIPTEN__
