@@ -7,3 +7,6 @@
 [submodule "library/WebGPU-distribution"]
 	path = library/WebGPU-distribution
 	url = https://github.com/eliemichel/WebGPU-distribution
+[submodule "library/tlsf"]
+	path = library/tlsf
+	url = https://github.com/mattconte/tlsf
