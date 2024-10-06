@@ -7,32 +7,33 @@ project(paranoixa)
 add_subdirectory(test)
 add_subdirectory(library/WebGPU-distribution)
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
-find_package(Vulkan)
 
 if(NOT MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 endif()
 
-# Imgui settings
-set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES")
-
 if(WIN32)
+  # Imgui settings
+  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU")
+  find_package(Vulkan)
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/library/imgui
     ${CMAKE_SOURCE_DIR}/library/SDL/include
     ${CMAKE_SOURCE_DIR}/include/paranoixa
-    ${CMAKE_BINARY_DIR}/_deps/webgpu-backend-wgpu-src/include
     ${CMAKE_SOURCE_DIR}/library/volk
     ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator
+    ${CMAKE_SOURCE_DIR}/library/tlsf
+    ${EMSDK}/upstream/emscripten/system/include
   )
 endif()
 
 if(EMSCRIPTEN)
   include_directories(
-    ${CMAKE_SOURCE_DIR}/library/imgui
     ${CMAKE_SOURCE_DIR}/include/paranoixa
+    ${CMAKE_SOURCE_DIR}/library/imgui
+    ${CMAKE_SOURCE_DIR}/library/tlsf
   )
 endif()
 
@@ -40,6 +41,7 @@ file(GLOB
   SOURCE_FILES
   source/paranoixa.cpp
   source/*/*.cpp
+  library/tlsf/tlsf.c
 )
 
 if(EMSCRIPTEN)
@@ -65,9 +67,9 @@ if(WIN32)
     library/imgui/backends/imgui_impl_wgpu.cpp
     source/*/*/*.cpp
   )
+  find_library(Vulkan SDL3)
 endif()
 
-find_library(Vulkan SDL3)
 add_library(paranoixa STATIC ${SOURCE_FILES})
 target_include_directories(paranoixa PUBLIC ${PARANOIXA_INCLUDE_DIRS})
 target_link_libraries(paranoixa PRIVATE webgpu SDL3::SDL3)
