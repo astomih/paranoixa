@@ -5,17 +5,37 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(paranoixa)
 add_subdirectory(test)
-add_subdirectory(library/WebGPU-distribution)
+
+# add_subdirectory(library/WebGPU-distribution)
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 
 if(NOT MSVC)
-  set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+  set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
+  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
 endif()
 
 if(WIN32)
+  set(DAWN_ENABLE_D3D11 OFF)
+  set(DAWN_ENABLE_D3D12 OFF)
+  set(DAWN_ENABLE_METAL OFF)
+  set(DAWN_ENABLE_NULL OFF)
+  set(DAWN_ENABLE_DESKTOP_GL OFF)
+  set(DAWN_ENABLE_OPENGLES OFF)
+  set(DAWN_ENABLE_VULKAN ON)
+  set(TINT_BUILD_SPV_READER OFF)
+
+  # Disable unneeded parts
+  set(DAWN_BUILD_SAMPLES OFF)
+  set(TINT_BUILD_CMD_TOOLS OFF)
+  set(TINT_BUILD_TESTS OFF)
+  set(TINT_BUILD_IR_BINARY OFF)
+
+  set(DAWN_FETCH_DEPENDENCIES ON)
+  add_subdirectory(library/dawn EXCLUDE_FROM_ALL)
+
   # Imgui settings
-  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU")
+  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
   find_package(Vulkan)
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
@@ -34,6 +54,7 @@ if(EMSCRIPTEN)
     ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_SOURCE_DIR}/library/imgui
     ${CMAKE_SOURCE_DIR}/library/tlsf
+    ${CMAKE_BINARY_DIR}/../library/dawn/gen/src/emdawnwebgpu/include
   )
 endif()
 
@@ -72,5 +93,13 @@ endif()
 
 add_library(paranoixa STATIC ${SOURCE_FILES})
 target_include_directories(paranoixa PUBLIC ${PARANOIXA_INCLUDE_DIRS})
-target_link_libraries(paranoixa PRIVATE webgpu SDL3::SDL3)
-target_copy_webgpu_binaries(paranoixa)
+
+if(EMSCRIPTEN)
+  target_link_libraries(paranoixa PRIVATE SDL3::SDL3)
+endif()
+
+if(WIN32)
+  target_link_libraries(paranoixa PRIVATE dawn::webgpu_dawn webgpu_dawn SDL3::SDL3)
+endif()
+
+# target_copy_webgpu_binaries(paranoixa)

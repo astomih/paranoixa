@@ -13,7 +13,7 @@ if(EMSCRIPTEN)
 		"${CMAKE_CXX_FLAGS} \
 		-Wno-unused-command-line-argument \
 		-s WASM=1 \
-		-s USE_WEBGPU=1 \
+		-s USE_WEBGPU \
 		-s ASYNCIFY=1 \
 		--preload-file res \
 		-std=c++20")

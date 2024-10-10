@@ -131,10 +131,10 @@ void WebGPURenderer::ProcessEvent(void *event) {
 }
 void WebGPURenderer::CreateSurface(void *window) {
 #ifdef __EMSCRIPTEN__
-  WGPUSurfaceDescriptorFromCanvasHTMLSelector fromCanvasHTMLSelector = {};
+  WGPUSurfaceSourceCanvasHTMLSelector_Emscripten fromCanvasHTMLSelector = {};
   fromCanvasHTMLSelector.chain.next = NULL;
   fromCanvasHTMLSelector.chain.sType =
-      WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
+      WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten;
   fromCanvasHTMLSelector.selector = "canvas";
 
   WGPUSurfaceDescriptor surfaceDescriptor = {};
@@ -149,11 +149,11 @@ void WebGPURenderer::CreateSurface(void *window) {
         SDL_GetWindowProperties((::SDL_Window *)window),
         SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
     HINSTANCE hinstance = GetModuleHandle(NULL);
-    WGPUSurfaceDescriptorFromWindowsHWND desc{
+    WGPUSurfaceSourceWindowsHWND desc{
         .chain =
             WGPUChainedStruct{
                 .next = NULL,
-                .sType = WGPUSType_SurfaceDescriptorFromWindowsHWND,
+                .sType = WGPUSType_SurfaceSourceWindowsHWND,
             },
         .hinstance = hinstance,
         .hwnd = hwnd};
@@ -227,7 +227,6 @@ void WebGPURenderer::CreateDevice() {
     userData.requestEnded = true;
   };
   WGPUDeviceDescriptor descriptor{};
-#ifdef WEBGPU_BACKEND_DAWN
   descriptor.deviceLostCallbackInfo.callback =
       [](const WGPUDevice *device, WGPUDeviceLostReason reason,
          char const *message, void * /* pUserData */) {
@@ -236,16 +235,6 @@ void WebGPURenderer::CreateDevice() {
           std::cout << " (" << message << ")";
         std::cout << std::endl;
       };
-#else
-  descriptor.deviceLostCallback = [](WGPUDeviceLostReason reason,
-                                     char const *message,
-                                     void * /* pUserData */) {
-    std::cout << "Device lost: reason " << reason;
-    if (message)
-      std::cout << " (" << message << ")";
-    std::cout << std::endl;
-  };
-#endif
 
   wgpuAdapterRequestDevice(adapter, &descriptor, onDeviceRequestEnded,
                            (void *)&userData);
@@ -426,19 +415,19 @@ void WebGPURenderer::Render() {
   wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, nullptr);
   wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertexBuffer, 0, 192);
   wgpuRenderPassEncoderDraw(renderPass, 6, 1, 0, 0);
-  ImGui_ImplWGPU_NewFrame();
-  ImGui_ImplSDL3_NewFrame();
-  ImGui::NewFrame();
-  ImGuiIO &io = ImGui::GetIO();
-  ImGui::ShowDemoWindow();
-  ImGui::Render();
-  ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
+   ImGui_ImplWGPU_NewFrame();
+   ImGui_ImplSDL3_NewFrame();
+   ImGui::NewFrame();
+   ImGuiIO &io = ImGui::GetIO();
+   ImGui::ShowDemoWindow();
+   ImGui::Render();
+   ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
   wgpuRenderPassEncoderEnd(renderPass);
-  wgpuRenderPassEncoderReference(renderPass);
 
   // Submit the command buffer
   WGPUCommandBufferDescriptor cmdBufferDesc{};
   cmdBufferDesc.nextInChain = nullptr;
+  cmdBufferDesc.label = "Paranoixa Command buffer";
   WGPUCommandBuffer cmdBuffer =
       wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
   wgpuCommandEncoderRelease(encoder);
@@ -454,7 +443,7 @@ void WebGPURenderer::InitializePipeline() {
   WGPUShaderModuleDescriptor shaderDesc{};
   WGPUShaderModuleWGSLDescriptor wgslDesc{};
   wgslDesc.chain.next = nullptr;
-  wgslDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+  wgslDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
   shaderDesc.nextInChain = &wgslDesc.chain;
 
   auto &fileLoader = GetFileLoader();
@@ -463,16 +452,17 @@ void WebGPURenderer::InitializePipeline() {
   fileLoader->Load("res/shader.vert.wgsl", vertCode, std::ios::in);
   fileLoader->Load("res/shader.frag.wgsl", fragCode, std::ios::in);
 
-  wgslDesc.code = vertCode.data();
+  wgslDesc.code = {vertCode.data(), vertCode.size()};
   WGPUShaderModule vertShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
 
-  wgslDesc.code = fragCode.data();
+  wgslDesc.code = {fragCode.data(), fragCode.size()};
   WGPUShaderModule fragShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
 
   WGPURenderPipelineDescriptor pipelineDesc{};
   pipelineDesc.nextInChain = nullptr;
+  pipelineDesc.label = "Paranoixa Pipeline";
   pipelineDesc.vertex.bufferCount = 1;
   WGPUVertexBufferLayout vertexBufferLayout{};
   vertexBufferLayout.arrayStride = sizeof(float) * 8;
@@ -599,6 +589,7 @@ void WebGPURenderer::InitializePipeline() {
 
   WGPUPipelineLayoutDescriptor pipelineLayoutDesc{};
   pipelineLayoutDesc.nextInChain = nullptr;
+  pipelineLayoutDesc.label = "Paranoixa Pipeline layout";
   pipelineLayoutDesc.bindGroupLayoutCount = 1;
   pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
   auto pipelineLayout =
