@@ -131,10 +131,10 @@ void WebGPURenderer::ProcessEvent(void *event) {
 }
 void WebGPURenderer::CreateSurface(void *window) {
 #ifdef __EMSCRIPTEN__
-  WGPUSurfaceSourceCanvasHTMLSelector_Emscripten fromCanvasHTMLSelector = {};
+  WGPUSurfaceDescriptorFromCanvasHTMLSelector fromCanvasHTMLSelector = {};
   fromCanvasHTMLSelector.chain.next = NULL;
   fromCanvasHTMLSelector.chain.sType =
-      WGPUSType_SurfaceSourceCanvasHTMLSelector_Emscripten;
+      WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
   fromCanvasHTMLSelector.selector = "canvas";
 
   WGPUSurfaceDescriptor surfaceDescriptor = {};
@@ -227,6 +227,16 @@ void WebGPURenderer::CreateDevice() {
     userData.requestEnded = true;
   };
   WGPUDeviceDescriptor descriptor{};
+#ifdef __EMSCRIPTEN__
+  descriptor.deviceLostCallback = [](WGPUDeviceLostReason reason,
+                                     char const *message,
+                                     void * /* pUserData */) {
+    std::cout << "Device lost: reason " << reason;
+    if (message)
+      std::cout << " (" << message << ")";
+    std::cout << std::endl;
+  };
+#else
   descriptor.deviceLostCallbackInfo.callback =
       [](const WGPUDevice *device, WGPUDeviceLostReason reason,
          char const *message, void * /* pUserData */) {
@@ -235,6 +245,7 @@ void WebGPURenderer::CreateDevice() {
           std::cout << " (" << message << ")";
         std::cout << std::endl;
       };
+#endif
 
   wgpuAdapterRequestDevice(adapter, &descriptor, onDeviceRequestEnded,
                            (void *)&userData);
@@ -415,14 +426,19 @@ void WebGPURenderer::Render() {
   wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, nullptr);
   wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertexBuffer, 0, 192);
   wgpuRenderPassEncoderDraw(renderPass, 6, 1, 0, 0);
-   ImGui_ImplWGPU_NewFrame();
-   ImGui_ImplSDL3_NewFrame();
-   ImGui::NewFrame();
-   ImGuiIO &io = ImGui::GetIO();
-   ImGui::ShowDemoWindow();
-   ImGui::Render();
-   ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
+  ImGui_ImplWGPU_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
+  ImGuiIO &io = ImGui::GetIO();
+  ImGui::ShowDemoWindow();
+  ImGui::Render();
+  ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
   wgpuRenderPassEncoderEnd(renderPass);
+  #ifdef __EMSCRIPTEN__
+  wgpuRenderPassEncoderReference(renderPass);
+  #else
+  wgpuRenderPassEncoderAddRef(renderPass);
+  #endif
 
   // Submit the command buffer
   WGPUCommandBufferDescriptor cmdBufferDesc{};
@@ -443,7 +459,11 @@ void WebGPURenderer::InitializePipeline() {
   WGPUShaderModuleDescriptor shaderDesc{};
   WGPUShaderModuleWGSLDescriptor wgslDesc{};
   wgslDesc.chain.next = nullptr;
+#ifdef __EMSCRIPTEN__
+  wgslDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+#else
   wgslDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+#endif
   shaderDesc.nextInChain = &wgslDesc.chain;
 
   auto &fileLoader = GetFileLoader();
@@ -452,11 +472,19 @@ void WebGPURenderer::InitializePipeline() {
   fileLoader->Load("res/shader.vert.wgsl", vertCode, std::ios::in);
   fileLoader->Load("res/shader.frag.wgsl", fragCode, std::ios::in);
 
+#ifdef __EMSCRIPTEN__
+  wgslDesc.code = vertCode.data();
+#else
   wgslDesc.code = {vertCode.data(), vertCode.size()};
+#endif
   WGPUShaderModule vertShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
 
+#ifdef __EMSCRIPTEN__
+  wgslDesc.code = fragCode.data();
+#else
   wgslDesc.code = {fragCode.data(), fragCode.size()};
+#endif
   WGPUShaderModule fragShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
 

@@ -5,14 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 
 project(paranoixa)
 add_subdirectory(test)
-
-# add_subdirectory(library/WebGPU-distribution)
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 
 if(NOT MSVC)
-  set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
-  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
+  set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 endif()
 
 if(WIN32)
@@ -54,7 +51,6 @@ if(EMSCRIPTEN)
     ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_SOURCE_DIR}/library/imgui
     ${CMAKE_SOURCE_DIR}/library/tlsf
-    ${CMAKE_BINARY_DIR}/../library/dawn/gen/src/emdawnwebgpu/include
   )
 endif()
 
@@ -101,5 +97,3 @@ endif()
 if(WIN32)
   target_link_libraries(paranoixa PRIVATE dawn::webgpu_dawn webgpu_dawn SDL3::SDL3)
 endif()
-
-# target_copy_webgpu_binaries(paranoixa)
