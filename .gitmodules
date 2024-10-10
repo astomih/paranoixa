@@ -4,9 +4,9 @@
 [submodule "library/imgui"]
 	path = library/imgui
 	url = https://github.com/ocornut/imgui
-[submodule "library/WebGPU-distribution"]
-	path = library/WebGPU-distribution
-	url = https://github.com/eliemichel/WebGPU-distribution
 [submodule "library/tlsf"]
 	path = library/tlsf
 	url = https://github.com/mattconte/tlsf
+[submodule "library/dawn"]
+	path = library/dawn
+	url = https://dawn.googlesource.com/dawn
