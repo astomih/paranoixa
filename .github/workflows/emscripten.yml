@@ -47,7 +47,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: web
-        download-path: web
+        download-path: web/
     - name: Deploy
       uses: JamesIves/github-pages-deploy-action@v4.2.2
       with:
