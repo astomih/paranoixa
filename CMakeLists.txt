@@ -40,7 +40,7 @@ if(WIN32)
     ${CMAKE_SOURCE_DIR}/library/SDL/include
     ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_SOURCE_DIR}/library/volk
-    ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator
+    ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator/include
     ${CMAKE_SOURCE_DIR}/library/tlsf
     ${EMSDK}/upstream/emscripten/system/include
   )
