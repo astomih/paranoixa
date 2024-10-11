@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.10)
 
 project(test)
 include_directories(${CMAKE_SOURCE_DIR}/include)
+
 if(NOT MSVC)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+	set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+	set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 endif()
 
 if(EMSCRIPTEN)
@@ -12,8 +13,9 @@ if(EMSCRIPTEN)
 		"${CMAKE_CXX_FLAGS} \
 		-Wno-unused-command-line-argument \
 		-s WASM=1 \
-		-s USE_WEBGPU=1 \
+		-s USE_WEBGPU \
 		-s ASYNCIFY=1 \
+		--preload-file res \
 		-std=c++20")
 	add_executable(test test.cpp)
 	target_link_libraries(test PRIVATE paranoixa)

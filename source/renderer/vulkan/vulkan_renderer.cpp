@@ -20,39 +20,6 @@
 #include "vulkan_renderer.hpp"
 namespace paranoixa {
 
-static std::unique_ptr<FileLoader> gFileLoader = nullptr;
-
-std::unique_ptr<FileLoader> &GetFileLoader() {
-  if (gFileLoader == nullptr) {
-    gFileLoader = std::make_unique<FileLoader>();
-  }
-  return gFileLoader;
-}
-
-bool FileLoader::Load(std::filesystem::path filePath,
-                      std::vector<char> &fileData,
-                      std::ios_base::openmode openMode) {
-  if (std::filesystem::exists(filePath)) {
-    std::ifstream infile(filePath, openMode);
-    if (infile) {
-      auto size = infile.seekg(0, std::ios::end).tellg();
-      fileData.resize(size);
-      infile.seekg(0, std::ios::beg).read(fileData.data(), size);
-      return true;
-    }
-  }
-  filePath = std::filesystem::path("../") / filePath;
-  if (std::filesystem::exists(filePath)) {
-    std::ifstream infile(filePath, std::ios::binary);
-    if (infile) {
-      auto size = infile.seekg(0, std::ios::end).tellg();
-      fileData.resize(size);
-      infile.seekg(0, std::ios::beg).read(fileData.data(), size);
-      return true;
-    }
-  }
-  return false;
-}
 VulkanRenderer::VulkanRenderer()
     : device(VK_NULL_HANDLE), graphicsQueue(VK_NULL_HANDLE),
       instance(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE),
@@ -151,19 +118,22 @@ void VulkanRenderer::Initialize(void *window) {
       ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Control
   io.WantCaptureMouse = true;
+  io.IniFilename = nullptr;
   ImGui::StyleColorsDark();
   ImGui_ImplSDL3_InitForVulkan(sdlWindow);
-  ImGui_ImplVulkan_LoadFunctions([](const char *functionName, void *userArgs) {
-    auto &dev = GetVulkanRenderer();
-    auto vkDevice = dev.device;
-    auto vkInstance = dev.instance;
-    auto devFuncAddr = vkGetDeviceProcAddr(vkDevice, functionName);
-    if (devFuncAddr != nullptr) {
-      return devFuncAddr;
-    }
-    auto instanceFuncAddr = vkGetInstanceProcAddr(vkInstance, functionName);
-    return instanceFuncAddr;
-  });
+  ImGui_ImplVulkan_LoadFunctions(
+      [](const char *functionName, void *userArgs) {
+        VulkanRenderer *renderer = static_cast<VulkanRenderer *>(userArgs);
+        auto vkDevice = renderer->device;
+        auto vkInstance = renderer->instance;
+        auto devFuncAddr = vkGetDeviceProcAddr(vkDevice, functionName);
+        if (devFuncAddr != nullptr) {
+          return devFuncAddr;
+        }
+        auto instanceFuncAddr = vkGetInstanceProcAddr(vkInstance, functionName);
+        return instanceFuncAddr;
+      },
+      this);
   ImGui_ImplVulkan_InitInfo vulkanInfo{
       .Instance = instance,
       .PhysicalDevice = physicalDevice,
@@ -1082,7 +1052,7 @@ VulkanRenderer::Texture VulkanRenderer::CreateTexture(const void *data,
   Texture texture;
   VmaAllocationInfo allocationInfo;
   texture.image =
-      CreateImage(width, height, VK_FORMAT_R8G8B8A8_SRGB,
+      CreateImage(width, height, VK_FORMAT_R8G8B8A8_UNORM,
                   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                   VMA_MEMORY_USAGE_AUTO, texture.allocation, &allocationInfo);
 
@@ -1192,7 +1162,7 @@ VulkanRenderer::Texture VulkanRenderer::CreateTexture(const void *data,
       .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
       .image = texture.image,
       .viewType = VK_IMAGE_VIEW_TYPE_2D,
-      .format = VK_FORMAT_R8G8B8A8_SRGB,
+      .format = VK_FORMAT_R8G8B8A8_UNORM,
       .components =
           {
               VK_COMPONENT_SWIZZLE_IDENTITY,

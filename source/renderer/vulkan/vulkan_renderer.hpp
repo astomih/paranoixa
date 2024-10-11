@@ -2,7 +2,7 @@
 #define PARANOIXA_VULKAN_RENDERER_HPP
 // Emscripten doesn't support Vulkan
 #ifndef __EMSCRIPTEN__
-#include "../renderer.hpp"
+#include <renderer/renderer.hpp>
 
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -113,7 +113,6 @@ private:
   int currentFrameIndex = 0;
   uint32_t swapchainImageIndex = 0;
 };
-VulkanRenderer &GetVulkanRenderer();
 } // namespace paranoixa
 #endif // __EMSCRIPTEN__
 #endif // PARANOIXA_VULKAN_RENDERER_HPP

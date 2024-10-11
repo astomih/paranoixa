@@ -6,73 +6,92 @@
 #include "renderer/renderer.hpp"
 #include "renderer/vulkan/vulkan_renderer.hpp"
 #include "renderer/webgpu/webgpu_renderer.hpp"
+#include <SDL3/SDL.h>
+#include <fstream>
 #include <iostream>
-#include <memory>
 namespace paranoixa {
-std::unique_ptr<class Renderer> renderer;
-#ifndef __EMSCRIPTEN__
-VulkanRenderer &GetVulkanRenderer() {
-  return dynamic_cast<VulkanRenderer &>(*renderer);
+static std::unique_ptr<FileLoader> gFileLoader = nullptr;
+
+std::unique_ptr<FileLoader> &GetFileLoader() {
+  if (gFileLoader == nullptr) {
+    gFileLoader = std::make_unique<FileLoader>();
+  }
+  return gFileLoader;
 }
+
+bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
+                      std::ios_base::openmode openMode) {
+  std::string openModeStr;
+
+  if (openMode & std::ios::in) {
+    openModeStr += "r";
+  }
+  if (openMode & std::ios::binary) {
+    openModeStr += "b";
+  }
+
+  auto file = SDL_IOFromFile(filePath, openModeStr.c_str());
+  size_t size;
+  void *data = SDL_LoadFile_IO(file, &size, true);
+
+  if (data) {
+#ifdef __EMSCRIPTEN__
+    fileData.resize(size + 1);
+    memcpy(fileData.data(), data, size);
+    fileData[size] = '\0';
+#else 
+    fileData.resize(size);
+    memcpy(fileData.data(), data, size);
 #endif
-Application::~Application() {}
-class Application::Implement {
-public:
-  Implement() = default;
-  ~Implement();
-  ::SDL_Window *window;
-  bool running = true;
-};
-Application::Implement::~Implement() {
-  renderer.reset();
-  // SDL_DestroyWindow(window);
+    for (int i = 0; i < size; i++) {
+      std::cout << fileData[i];
+    }
+    return true;
+  }
+
+  return false;
+}
+static ::SDL_Window *window = nullptr;
+static bool running = true;
+Paranoixa::~Paranoixa() {
+  renderer.Reset();
+  SDL_DestroyWindow(window);
   SDL_Quit();
 }
-void Application::ImplementDeleter::operator()(Implement *implement) {
-  delete implement;
-}
-void Application::Initialize(GraphicsAPI api) {
-  implement = std::unique_ptr<Implement, ImplementDeleter>(new Implement());
-#ifndef __EMSCRIPTEN__
-  switch (api) {
-  case GraphicsAPI::WebGPU: {
-    renderer = std::make_unique<WebGPURenderer>();
-    break;
-  }
-  case GraphicsAPI::Vulkan:
-    renderer = std::make_unique<VulkanRenderer>();
-    break;
-  }
-#else
-  renderer = std::make_unique<WebGPURenderer>();
-#endif
-
-  if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_TIMER) != 0) {
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
-                 SDL_GetError());
-  }
-  uint32_t windowFlags = 0;
-#ifdef __EMSCRIPTEN__
-  std::string windowName = "Paranoixa ( WASM )";
-#else
+Paranoixa::Paranoixa(const Paranoixa::Desc &desc)
+    : allocator(desc.allocator), renderer(desc.allocator) {
   std::string windowName;
-  switch (api) {
-  case GraphicsAPI::WebGPU:
+  uint32_t windowFlags = 0;
+#ifndef __EMSCRIPTEN__
+  switch (desc.api) {
+  case GraphicsAPI::WebGPU: {
+    renderer = MakeUnique<WebGPURenderer>(allocator);
     windowName = "Paranoixa ( Native WGPU )";
     break;
+  }
   case GraphicsAPI::Vulkan:
+    renderer = MakeUnique<VulkanRenderer>(allocator);
     windowFlags |= SDL_WINDOW_VULKAN;
     windowName = "Paranoixa ( Native Vulkan )";
     break;
   }
-#endif // __EMSCRIPTEN__
+#else
+  renderer = MakeUnique<WebGPURenderer>(allocator);
+  windowName = "Paranoixa ( WASM )";
+#endif
+
+  if (SDL_Init(SDL_INIT_EVENTS) != 0) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
+                 SDL_GetError());
+  }
   SDL_Surface *surface = SDL_LoadBMP("res/texture.bmp");
-  implement->window =
+  window =
       SDL_CreateWindow(windowName.c_str(), surface->w, surface->h, windowFlags);
-  renderer->Initialize(implement->window);
+  renderer->Initialize(window);
   SDL_DestroySurface(surface);
 }
-void Application::Run() {
+Ref<Renderer> Paranoixa::GetRenderer() { return Ref<Renderer>(renderer); }
+void Paranoixa::Run() {
 #ifndef __EMSCRIPTEN__
   while (this->IsRunning()) {
     this->Loop();
@@ -80,19 +99,19 @@ void Application::Run() {
 #else
   emscripten_set_main_loop_arg(
       [](void *userData) {
-        Application *app = reinterpret_cast<Application *>(userData);
+        Paranoixa *app = reinterpret_cast<Paranoixa *>(userData);
         app->Loop();
       },
       this, 0, 1);
 #endif // __EMSCRIPTEN__
 }
-bool Application::IsRunning() { return implement->running; }
-void Application::Loop() {
+bool Paranoixa::IsRunning() { return running; }
+void Paranoixa::Loop() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     renderer->ProcessEvent(&event);
     if (event.type == SDL_EVENT_QUIT) {
-      implement->running = false;
+      running = false;
     }
   }
   renderer->Render();

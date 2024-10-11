@@ -340,5 +340,6 @@ ASALocalRun/
 healthchecksdb
 
 # build
-build/
+[Bb]uild/
+[Ww]eb/
 *.dll

@@ -21,7 +21,13 @@
 #include <iostream>
 
 namespace paranoixa {
-WebGPURenderer::WebGPURenderer() {}
+#define COUNT_OF(x)                                                            \
+  ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
+WebGPURenderer::WebGPURenderer()
+    : instance(nullptr), adapter(nullptr), device(nullptr), queue(nullptr),
+      surface(nullptr), texture{}, sampler(nullptr), pipeline(nullptr),
+      bindGroup(nullptr), vertexBuffer(nullptr),
+      surfaceFormat(WGPUTextureFormat_Undefined), targetView(nullptr) {}
 WebGPURenderer::~WebGPURenderer() {
   ImGui_ImplWGPU_Shutdown();
   ImGui_ImplSDL3_Shutdown();
@@ -85,6 +91,7 @@ void WebGPURenderer::Initialize(void *window) {
   ImGuiIO &io = ImGui::GetIO();
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+  io.IniFilename = nullptr;
   ImGui::StyleColorsDark();
   ImGui_ImplSDL3_InitForOther((SDL_Window *)window);
   ImGui_ImplWGPU_InitInfo init_info{};
@@ -111,12 +118,12 @@ void WebGPURenderer::Initialize(void *window) {
       -1.f, 1.f,  0.f, 0, 1, 1, 0, 0, //
       1.f,  1.f,  0.f, 1, 1, 1, 0, 0, //
   };
-  vertexBuffer = this->CreateBuffer(sizeof(float) * _countof(quadVerts),
+  vertexBuffer = this->CreateBuffer(sizeof(float) * COUNT_OF(quadVerts),
                                     WGPUBufferUsage_Vertex);
 
   void *mapped = wgpuBufferGetMappedRange(vertexBuffer, 0,
-                                          sizeof(float) * _countof(quadVerts));
-  memcpy(mapped, quadVerts, sizeof(float) * _countof(quadVerts));
+                                          sizeof(float) * COUNT_OF(quadVerts));
+  memcpy(mapped, quadVerts, sizeof(float) * COUNT_OF(quadVerts));
   wgpuBufferUnmap(vertexBuffer);
 }
 void WebGPURenderer::ProcessEvent(void *event) {
@@ -142,11 +149,11 @@ void WebGPURenderer::CreateSurface(void *window) {
         SDL_GetWindowProperties((::SDL_Window *)window),
         SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
     HINSTANCE hinstance = GetModuleHandle(NULL);
-    WGPUSurfaceDescriptorFromWindowsHWND desc{
+    WGPUSurfaceSourceWindowsHWND desc{
         .chain =
             WGPUChainedStruct{
                 .next = NULL,
-                .sType = WGPUSType_SurfaceDescriptorFromWindowsHWND,
+                .sType = WGPUSType_SurfaceSourceWindowsHWND,
             },
         .hinstance = hinstance,
         .hwnd = hwnd};
@@ -220,16 +227,7 @@ void WebGPURenderer::CreateDevice() {
     userData.requestEnded = true;
   };
   WGPUDeviceDescriptor descriptor{};
-#ifdef WEBGPU_BACKEND_DAWN
-  descriptor.deviceLostCallbackInfo.callback =
-      [](const WGPUDevice *device, WGPUDeviceLostReason reason,
-         char const *message, void * /* pUserData */) {
-        std::cout << "Device lost: reason " << reason;
-        if (message)
-          std::cout << " (" << message << ")";
-        std::cout << std::endl;
-      };
-#else
+#ifdef __EMSCRIPTEN__
   descriptor.deviceLostCallback = [](WGPUDeviceLostReason reason,
                                      char const *message,
                                      void * /* pUserData */) {
@@ -238,6 +236,15 @@ void WebGPURenderer::CreateDevice() {
       std::cout << " (" << message << ")";
     std::cout << std::endl;
   };
+#else
+  descriptor.deviceLostCallbackInfo.callback =
+      [](const WGPUDevice *device, WGPUDeviceLostReason reason,
+         char const *message, void * /* pUserData */) {
+        std::cout << "Device lost: reason " << reason;
+        if (message)
+          std::cout << " (" << message << ")";
+        std::cout << std::endl;
+      };
 #endif
 
   wgpuAdapterRequestDevice(adapter, &descriptor, onDeviceRequestEnded,
@@ -268,10 +275,6 @@ void WebGPURenderer::ConfigSurface(uint32_t width, uint32_t height) {
   config.width = width;
   config.height = height;
   config.usage = WGPUTextureUsage_RenderAttachment;
-  surfaceFormat = WGPUTextureFormat_BGRA8UnormSrgb;
-  WGPUSurfaceCapabilities capabilities;
-  wgpuSurfaceGetCapabilities(surface, adapter, &capabilities);
-  surfaceFormat = capabilities.formats[0];
   surfaceFormat = WGPUTextureFormat_RGBA8Unorm;
   std::cout << "Surface format: " << surfaceFormat << std::endl;
   config.format = surfaceFormat;
@@ -289,7 +292,7 @@ WebGPURenderer::Texture WebGPURenderer::CreateTexture(const void *data,
   WGPUTextureFormat format = WGPUTextureFormat_RGBA8Unorm;
   WGPUTextureDescriptor descriptor{
       .nextInChain = nullptr,
-      .label = "Texture",
+      .label = "Paranoixa Texture",
       .usage = WGPUTextureUsage_CopyDst | WGPUTextureUsage_TextureBinding,
       .dimension = WGPUTextureDimension_2D,
       .size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1},
@@ -322,7 +325,7 @@ WebGPURenderer::Texture WebGPURenderer::CreateTexture(const void *data,
 
   WGPUTextureViewDescriptor viewDescriptor{
       .nextInChain = nullptr,
-      .label = "Texture view",
+      .label = "Paranoixa Texture view",
       .format = WGPUTextureFormat_RGBA8Unorm,
       .dimension = WGPUTextureViewDimension_2D,
       .baseMipLevel = 0,
@@ -338,7 +341,7 @@ WebGPURenderer::Texture WebGPURenderer::CreateTexture(const void *data,
 WGPUBuffer WebGPURenderer::CreateBuffer(uint64_t size, WGPUBufferUsage usage) {
   WGPUBufferDescriptor bufferDesc{};
   bufferDesc.nextInChain = nullptr;
-  bufferDesc.label = "Buffer";
+  bufferDesc.label = "Paranoixa Buffer";
   bufferDesc.size = size;
   bufferDesc.usage = usage;
   bufferDesc.mappedAtCreation = true;
@@ -347,7 +350,7 @@ WGPUBuffer WebGPURenderer::CreateBuffer(uint64_t size, WGPUBufferUsage usage) {
 void WebGPURenderer::CreateSampler() {
   WGPUSamplerDescriptor samplerDesc{};
   samplerDesc.nextInChain = nullptr;
-  samplerDesc.label = "Sampler";
+  samplerDesc.label = "Paranoixa Sampler";
   samplerDesc.minFilter = WGPUFilterMode_Nearest;
   samplerDesc.magFilter = WGPUFilterMode_Nearest;
   samplerDesc.addressModeU = WGPUAddressMode_Repeat;
@@ -369,7 +372,7 @@ WGPUTextureView WebGPURenderer::GetNextSurfaceTextureView() {
   }
   WGPUTextureViewDescriptor viewDescriptor;
   viewDescriptor.nextInChain = nullptr;
-  viewDescriptor.label = "Surface texture view";
+  viewDescriptor.label = "Paranoixa Surface texture view";
   viewDescriptor.format = wgpuTextureGetFormat(surfaceTexture.texture);
   viewDescriptor.dimension = WGPUTextureViewDimension_2D;
   viewDescriptor.baseMipLevel = 0;
@@ -406,7 +409,7 @@ void WebGPURenderer::Render() {
   colorAttachment.storeOp = WGPUStoreOp_Store;
   colorAttachment.clearValue =
       WGPUColor{.r = 1.0f, .g = 0.4f, .b = 0.0f, .a = 1.0f};
-#ifdef WEBGPU_BACKEND_DAWN
+#ifndef WEBGPU_BACKEND_WGPU
   colorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
 
@@ -428,16 +431,19 @@ void WebGPURenderer::Render() {
   ImGui::NewFrame();
   ImGuiIO &io = ImGui::GetIO();
   ImGui::ShowDemoWindow();
-  ImGui::Begin("Hello, world!");
-  ImGui::End();
   ImGui::Render();
   ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
   wgpuRenderPassEncoderEnd(renderPass);
-  // wgpuRenderPassEncoderReference(renderPass);
+  #ifdef __EMSCRIPTEN__
+  wgpuRenderPassEncoderReference(renderPass);
+  #else
+  wgpuRenderPassEncoderAddRef(renderPass);
+  #endif
 
   // Submit the command buffer
   WGPUCommandBufferDescriptor cmdBufferDesc{};
   cmdBufferDesc.nextInChain = nullptr;
+  cmdBufferDesc.label = "Paranoixa Command buffer";
   WGPUCommandBuffer cmdBuffer =
       wgpuCommandEncoderFinish(encoder, &cmdBufferDesc);
   wgpuCommandEncoderRelease(encoder);
@@ -453,7 +459,11 @@ void WebGPURenderer::InitializePipeline() {
   WGPUShaderModuleDescriptor shaderDesc{};
   WGPUShaderModuleWGSLDescriptor wgslDesc{};
   wgslDesc.chain.next = nullptr;
+#ifdef __EMSCRIPTEN__
   wgslDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+#else
+  wgslDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+#endif
   shaderDesc.nextInChain = &wgslDesc.chain;
 
   auto &fileLoader = GetFileLoader();
@@ -462,16 +472,25 @@ void WebGPURenderer::InitializePipeline() {
   fileLoader->Load("res/shader.vert.wgsl", vertCode, std::ios::in);
   fileLoader->Load("res/shader.frag.wgsl", fragCode, std::ios::in);
 
+#ifdef __EMSCRIPTEN__
   wgslDesc.code = vertCode.data();
+#else
+  wgslDesc.code = {vertCode.data(), vertCode.size()};
+#endif
   WGPUShaderModule vertShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
 
+#ifdef __EMSCRIPTEN__
   wgslDesc.code = fragCode.data();
+#else
+  wgslDesc.code = {fragCode.data(), fragCode.size()};
+#endif
   WGPUShaderModule fragShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
 
   WGPURenderPipelineDescriptor pipelineDesc{};
   pipelineDesc.nextInChain = nullptr;
+  pipelineDesc.label = "Paranoixa Pipeline";
   pipelineDesc.vertex.bufferCount = 1;
   WGPUVertexBufferLayout vertexBufferLayout{};
   vertexBufferLayout.arrayStride = sizeof(float) * 8;
@@ -565,8 +584,8 @@ void WebGPURenderer::InitializePipeline() {
   };
   WGPUBindGroupLayoutDescriptor bindGroupLayoutDesc{
       .nextInChain = nullptr,
-      .label = "Bind group layout",
-      .entryCount = _countof(entry),
+      .label = "Paranoixa Bind group layout",
+      .entryCount = COUNT_OF(entry),
       .entries = entry,
   };
   auto bindGroupLayout =
@@ -589,15 +608,16 @@ void WebGPURenderer::InitializePipeline() {
        .textureView = nullptr},
   }; // namespace paranoixa
   WGPUBindGroupDescriptor bindGroupDesc{.nextInChain = nullptr,
-                                        .label = "Texture bind group",
+                                        .label = "Paranoixa Texture bind group",
                                         .layout = bindGroupLayout,
-                                        .entryCount = _countof(bindGroupEntry),
+                                        .entryCount = COUNT_OF(bindGroupEntry),
                                         .entries = bindGroupEntry};
 
   bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
 
   WGPUPipelineLayoutDescriptor pipelineLayoutDesc{};
   pipelineLayoutDesc.nextInChain = nullptr;
+  pipelineLayoutDesc.label = "Paranoixa Pipeline layout";
   pipelineLayoutDesc.bindGroupLayoutCount = 1;
   pipelineLayoutDesc.bindGroupLayouts = &bindGroupLayout;
   auto pipelineLayout =

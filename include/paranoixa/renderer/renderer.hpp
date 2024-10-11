@@ -5,8 +5,8 @@
 namespace paranoixa {
 class FileLoader {
 public:
-  bool Load(std::filesystem::path filePath, std::vector<char> &fileData,
-            std::ios_base::openmode openMode = std::ios::binary);
+  bool Load(const char* filePath, std::vector<char> &fileData,
+            std::ios_base::openmode openMode = std::ios::in | std::ios::binary);
 };
 
 std::unique_ptr<FileLoader> &GetFileLoader();
