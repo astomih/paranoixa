@@ -30,11 +30,12 @@ jobs:
         cp -r ${{github.workspace}}/test/res ${{github.workspace}}/build/test
         cd ${{github.workspace}}/build
         make -j2
+        cd ${{github.workspace}}
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: build
-        path: build
+        name: web
+        path: build/test
   deploy:
     concurrency: ci-${{ github.ref }}
     needs: [build] # The second job must depend on the first one to complete before running and uses ubuntu-latest instead of windows.
@@ -45,11 +46,11 @@ jobs:
     - name: Download Artifacts
       uses: actions/download-artifact@v4
       with:
-        name: build
+        name: web
     - name: Deploy
       uses: JamesIves/github-pages-deploy-action@v4.2.2
       with:
         branch: gh-pages
-        folder: 'build'
+        folder: 'web'
         ssh-key: ${{ secrets.DEPLOY_KEY }}
         target-folder: build
