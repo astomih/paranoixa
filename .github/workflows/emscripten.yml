@@ -20,6 +20,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: mymindstorm/setup-emsdk@v11
+      with:
+        version: ${{ env.EM_VERSION }}
     - name: CMake
       run: |
         git submodule update --init library/imgui library/SDL library/tlsf library/volk library/VulkanMemoryAllocator
