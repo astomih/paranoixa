@@ -1,0 +1,31 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(test)
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+if(NOT MSVC)
+	set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+	set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+endif()
+
+if(EMSCRIPTEN)
+	set(CMAKE_CXX_FLAGS
+		"${CMAKE_CXX_FLAGS} \
+		-Wno-unused-command-line-argument \
+		-s WASM=1 \
+		-s USE_WEBGPU \
+		-s ASYNCIFY=1 \
+		--preload-file res \
+		-std=c++20")
+	add_executable(test test.cpp)
+	target_link_libraries(test PRIVATE paranoixa)
+	set(CMAKE_EXECUTABLE_SUFFIX ".html")
+endif()
+
+if(WIN32)
+	link_directories(
+		..
+	)
+	add_executable(test test.cpp)
+	target_link_libraries(test PRIVATE paranoixa)
+endif()
