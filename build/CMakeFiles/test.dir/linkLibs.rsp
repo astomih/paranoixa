@@ -1,0 +1,1 @@
+ ../libparanoixa.a ../library/SDL/libSDL3.a -lm 
