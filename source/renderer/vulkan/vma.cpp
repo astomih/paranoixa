@@ -1,11 +1,11 @@
-#ifdef _DEBUG
+#ifdef DEBUG
 #define VMA_RECORDING_ENABLED 1
 #define VMA_DEBUG_INITIALIZE_ALLOCATIONS 1
 #define VMA_DEBUG_MARGIN 16
 #define VMA_DEBUG_DETECT_CORRUPTION 1
 #endif
 #define VMA_IMPLEMENTATION
-#define VMA_VULKAN_VERSION 1001000
+#define VMA_VULKAN_VERSION 1003000
 #include <cstdio>
 
 #include "vk_mem_alloc.h"
