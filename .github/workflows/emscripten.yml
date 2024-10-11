@@ -27,8 +27,7 @@ jobs:
         emcmake cmake -B build
     - name: Build
       run: |
-        cd ${{github.workspace}}/build
-        cp -r ${{github.workspace}}/test/res .
+        cp -r ${{github.workspace}}/test/res ${{github.workspace}}/build
         cd ${{github.workspace}}/build
         make -j2
     - name: Upload Artifacts
