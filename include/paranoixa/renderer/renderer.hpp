@@ -16,7 +16,10 @@ public:
   virtual ~Renderer() = default;
   virtual void Initialize(void *window) = 0;
   virtual void ProcessEvent(void *event) = 0;
-  virtual void Render() = 0;
+
+  virtual void BeginFrame() = 0;
+  virtual void EndFrame() = 0;
+
 };
 } // namespace paranoixa
 #endif // PARANOIXA_RENDERER_HPP

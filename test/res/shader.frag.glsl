@@ -8,8 +8,8 @@ layout(location=0) out vec4 outColor;
 #ifdef VULKAN
 layout(set=0,binding = 0) uniform sampler2D tex;
 #else
-layout(binding = 0) uniform texture2D tex;
-layout(binding = 1) uniform sampler samp;
+layout(set=0, binding = 0) uniform texture2D tex;
+layout(set=0, binding = 1) uniform sampler samp;
 #endif
 
 void main()

@@ -21,7 +21,8 @@ public:
   ~VulkanRenderer() override;
   void Initialize(void *window) override;
   void ProcessEvent(void *event) override;
-  void Render() override;
+  void BeginFrame() override;
+  void EndFrame() override;
 
   struct Texture {
     Texture() = default;

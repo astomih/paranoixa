@@ -160,9 +160,36 @@ void VulkanRenderer::Initialize(void *window) {
 void VulkanRenderer::ProcessEvent(void *event) {
   ImGui_ImplSDL3_ProcessEvent(static_cast<SDL_Event *>(event));
 }
-void VulkanRenderer::Render() {
+void VulkanRenderer::BeginFrame() {
   this->NewFrame();
   this->ProcessFrame();
+}
+void VulkanRenderer::EndFrame() {
+  auto &frameInfo = frames[currentFrameIndex];
+  vkEndCommandBuffer(frameInfo.commandBuffer);
+
+  VkPipelineStageFlags waitStage{VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  VkSubmitInfo submitInfo{
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &frameInfo.presentCompleted,
+      .pWaitDstStageMask = &waitStage,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &frameInfo.commandBuffer,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &frameInfo.renderCompleted,
+  };
+  vkQueueSubmit(graphicsQueue, 1, &submitInfo, frameInfo.inFlightFence);
+
+  currentFrameIndex = (++currentFrameIndex) % this->MAX_FRAMES_IN_FLIGHT;
+
+  VkPresentInfoKHR presentInfo{.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                               .waitSemaphoreCount = 1,
+                               .pWaitSemaphores = &frameInfo.renderCompleted,
+                               .swapchainCount = 1,
+                               .pSwapchains = &swapchain,
+                               .pImageIndices = &swapchainImageIndex};
+  vkQueuePresentKHR(graphicsQueue, &presentInfo);
 }
 void VulkanRenderer::NewFrame() {
   auto &frameInfo = this->frames[currentFrameIndex];
@@ -232,35 +259,8 @@ void VulkanRenderer::ProcessFrame() {
 
   TransitionLayoutSwapchainImage(commandBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                  VK_ACCESS_2_NONE);
-  Submit();
 }
-void VulkanRenderer::Submit() {
-  auto &frameInfo = frames[currentFrameIndex];
-  vkEndCommandBuffer(frameInfo.commandBuffer);
-
-  VkPipelineStageFlags waitStage{VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-  VkSubmitInfo submitInfo{
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .waitSemaphoreCount = 1,
-      .pWaitSemaphores = &frameInfo.presentCompleted,
-      .pWaitDstStageMask = &waitStage,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &frameInfo.commandBuffer,
-      .signalSemaphoreCount = 1,
-      .pSignalSemaphores = &frameInfo.renderCompleted,
-  };
-  vkQueueSubmit(graphicsQueue, 1, &submitInfo, frameInfo.inFlightFence);
-
-  currentFrameIndex = (++currentFrameIndex) % this->MAX_FRAMES_IN_FLIGHT;
-
-  VkPresentInfoKHR presentInfo{.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-                               .waitSemaphoreCount = 1,
-                               .pWaitSemaphores = &frameInfo.renderCompleted,
-                               .swapchainCount = 1,
-                               .pSwapchains = &swapchain,
-                               .pImageIndices = &swapchainImageIndex};
-  vkQueuePresentKHR(graphicsQueue, &presentInfo);
-}
+void VulkanRenderer::Submit() {}
 
 void VulkanRenderer::CreateInstance(void *window) {
   auto *sdlWindow = static_cast<SDL_Window *>(window);
@@ -442,7 +442,7 @@ void VulkanRenderer::RecreateSwapchain(int width, int height) {
       .pQueueFamilyIndices = nullptr,
       .preTransform = surfaceCapabilities.currentTransform,
       .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-      .presentMode = VK_PRESENT_MODE_FIFO_KHR,
+      .presentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR,
       .clipped = VK_TRUE,
       .oldSwapchain = oldSwapchain};
   vkCreateSwapchainKHR(device, &swapchainCreateInfo, nullptr, &this->swapchain);
