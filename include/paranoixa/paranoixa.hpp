@@ -14,8 +14,11 @@
 
 namespace paranoixa {
 enum class GraphicsAPI {
-  WebGPU,
   Vulkan,
+#ifdef _WIN32
+  D3D12U,
+#endif
+  WebGPU,
 };
 template <typename T> struct ControlBlock {
 public:

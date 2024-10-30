@@ -35,9 +35,8 @@ bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
   void *data = SDL_LoadFile_IO(file, &size, true);
 
   if (data) {
-    fileData.resize(size + 1);
+    fileData.resize(size);
     memcpy(fileData.data(), data, size);
-    fileData[size] = '\0';
     return true;
   }
   return false;

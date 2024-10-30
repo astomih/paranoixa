@@ -36,11 +36,7 @@ private:
   void InitializePipeline();
 
   WGPUTextureView GetNextSurfaceTextureView();
-  #ifdef WEBGPU_BACKEND_DAWN
   WGPUStringView GetStringView(const char *str);
-  #else
-  const char *GetStringView(const char *str);
-  #endif
 
   // WebGPU instance
   WGPUInstance instance;

@@ -14,7 +14,7 @@ int main() {
   std::vector<int, StdAllocator<int>> vec({allocator});
   vec.push_back(1);
   {
-    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::Vulkan});
+    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::WebGPU});
     app.Run();
   }
   return 0;

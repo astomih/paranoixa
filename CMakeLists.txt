@@ -13,33 +13,32 @@ if(NOT MSVC)
 endif()
 
 if(WIN32)
-  set(DAWN_ENABLE_D3D11 OFF)
-  set(DAWN_ENABLE_D3D12 OFF)
-  set(DAWN_ENABLE_METAL OFF)
-  set(DAWN_ENABLE_NULL OFF)
-  set(DAWN_ENABLE_DESKTOP_GL OFF)
-  set(DAWN_ENABLE_OPENGLES OFF)
-  set(DAWN_ENABLE_VULKAN ON)
-  set(DAWN_USE_GLFW OFF)
-  set(DAWN_USE_WINDOWS_UI OFF)
-  set(TINT_BUILD_SPV_READER OFF)
+  set(PARANOIXA_USE_WEBGPU ON)
 
-  # Disable unneeded parts
-  set(DAWN_BUILD_SAMPLES OFF)
-  set(TINT_BUILD_CMD_TOOLS OFF)
-  set(TINT_BUILD_TESTS OFF)
-  set(TINT_BUILD_IR_BINARY OFF)
+  if(PARANOIXA_USE_WEBGPU)
+    set(DAWN_ENABLE_D3D11 OFF)
+    set(DAWN_ENABLE_D3D12 OFF)
+    set(DAWN_ENABLE_METAL OFF)
+    set(DAWN_ENABLE_NULL OFF)
+    set(DAWN_ENABLE_DESKTOP_GL OFF)
+    set(DAWN_ENABLE_OPENGLES OFF)
+    set(DAWN_ENABLE_VULKAN ON)
+    set(DAWN_USE_GLFW OFF)
+    set(DAWN_USE_WINDOWS_UI OFF)
+    set(TINT_BUILD_SPV_READER OFF)
 
-  set(DAWN_FETCH_DEPENDENCIES ON)
+    # Disable unneeded parts
+    set(DAWN_BUILD_SAMPLES OFF)
+    set(TINT_BUILD_CMD_TOOLS OFF)
+    set(TINT_BUILD_TESTS OFF)
+    set(TINT_BUILD_IR_BINARY OFF)
 
-  # add_subdirectory(library/dawn EXCLUDE_FROM_ALL)
-  add_subdirectory(library/WebGPU-distribution EXCLUDE_FROM_ALL)
+    set(DAWN_FETCH_DEPENDENCIES ON)
 
-  if(WEBGPU_BACKEND STREQUAL "WGPU")
-    set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU")
-  elseif(WEBGPU_BACKEND STREQUAL "DAWN")
-    set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
+    add_subdirectory(library/dawn EXCLUDE_FROM_ALL)
   endif()
+
+  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
 
   find_package(Vulkan)
   set(PARANOIXA_INCLUDE_DIRS
@@ -50,7 +49,6 @@ if(WIN32)
     ${CMAKE_SOURCE_DIR}/library/volk
     ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator/include
     ${CMAKE_SOURCE_DIR}/library/tlsf
-    ${EMSDK}/upstream/emscripten/system/include
   )
 endif()
 
@@ -103,5 +101,9 @@ if(EMSCRIPTEN)
 endif()
 
 if(WIN32)
-  target_link_libraries(paranoixa PRIVATE webgpu SDL3::SDL3)
+  if(PARANOIXA_USE_WEBGPU)
+    target_link_libraries(paranoixa PRIVATE dawn::webgpu_dawn webgpu_dawn SDL3::SDL3)
+  else()
+    target_link_libraries(paranoixa PRIVATE SDL3::SDL3)
+  endif()
 endif()
