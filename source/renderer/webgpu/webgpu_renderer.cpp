@@ -250,7 +250,6 @@ void WebGPURenderer::PrepareInstance() {
   if (!instance) {
     std::cerr << "Could not initialize WebGPU!" << std::endl;
   }
-  std::cout << "WGPU instance: " << instance << std::endl;
 }
 void WebGPURenderer::PrepareAdapter() {
   struct UserData {
@@ -281,7 +280,6 @@ void WebGPURenderer::PrepareAdapter() {
     emscripten_sleep(100);
   }
 #endif // __EMSCRIPTEN__
-  std::cout << "Adapter: " << userData.adapter << std::endl;
   adapter = userData.adapter;
 }
 void WebGPURenderer::PrepareDevice() {
@@ -348,7 +346,6 @@ void WebGPURenderer::PrepareDevice() {
     emscripten_sleep(100);
   }
 #endif // __EMSCRIPTEN__
-  std::cout << "Device: " << userData.device << std::endl;
   device = userData.device;
 }
 void WebGPURenderer::PrepareQueue() { queue = wgpuDeviceGetQueue(device); }
