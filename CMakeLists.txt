@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 project(paranoixa)
 add_subdirectory(test)
@@ -50,6 +50,11 @@ if(WIN32)
     ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator/include
     ${CMAKE_SOURCE_DIR}/library/tlsf
   )
+  file(GLOB_RECURSE
+    PARANOIXA_INCLUDE_FILES
+    ${CMAKE_SOURCE_DIR}/include/paranoixa/*.hpp
+    ${CMAKE_SOURCE_DIR}/source/*.hpp
+  )
 endif()
 
 if(EMSCRIPTEN)
@@ -93,8 +98,8 @@ if(WIN32)
   find_library(Vulkan SDL3)
 endif()
 
-add_library(paranoixa STATIC ${SOURCE_FILES})
-target_include_directories(paranoixa PUBLIC ${PARANOIXA_INCLUDE_DIRS})
+include_directories(${PARANOIXA_INCLUDE_DIRS})
+add_library(paranoixa STATIC ${SOURCE_FILES} ${PARANOIXA_INCLUDE_FILES})
 
 if(EMSCRIPTEN)
   target_link_libraries(paranoixa PRIVATE SDL3::SDL3)
@@ -102,8 +107,18 @@ endif()
 
 if(WIN32)
   if(PARANOIXA_USE_WEBGPU)
-    target_link_libraries(paranoixa PRIVATE dawn::webgpu_dawn webgpu_dawn SDL3::SDL3)
+    target_link_libraries(paranoixa PRIVATE
+      dawn::webgpu_dawn
+      webgpu_dawn
+      SDL3::SDL3
+      d3d12
+      dxgi
+    )
   else()
-    target_link_libraries(paranoixa PRIVATE SDL3::SDL3)
+    target_link_libraries(paranoixa PRIVATE
+      SDL3::SDL3
+      d3d12
+      dxgi
+    )
   endif()
 endif()

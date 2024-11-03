@@ -1,7 +1,7 @@
-#include <paranoixa/allocator/tlsf_allocator.hpp>
+#include <paranoixa/memory/tlsf_allocator.hpp>
 #include <paranoixa/paranoixa.hpp>
 
-#include <memory>
+
 void MemoryAllocatorTest();
 void PtrTest();
 int main() {
@@ -14,7 +14,7 @@ int main() {
   std::vector<int, StdAllocator<int>> vec({allocator});
   vec.push_back(1);
   {
-    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::WebGPU});
+    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::D3D12U});
     app.Run();
   }
   return 0;
@@ -22,7 +22,7 @@ int main() {
 
 void MemoryAllocatorTest() {
   using namespace paranoixa;
-  std::cout << "---------------MemoryAllocatorTest------------" << std::endl;
+  std::print("Memory Allocator Test");
   Allocator *allocator = new TLSFAllocator(0x2000);
   void *ptr = allocator->Allocate(128);
   allocator->Free(ptr, 128);

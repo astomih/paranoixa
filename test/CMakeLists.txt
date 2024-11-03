@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
 project(test)
+set(CMAKE_CXX_STANDARD 23)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 if(NOT MSVC)
@@ -15,8 +16,7 @@ if(EMSCRIPTEN)
 		-s WASM=1 \
 		-s USE_WEBGPU \
 		-s ASYNCIFY=1 \
-		--preload-file res \
-		-std=c++20")
+		--preload-file res")
 	add_executable(test test.cpp)
 	target_link_libraries(test PRIVATE paranoixa)
 	set(CMAKE_EXECUTABLE_SUFFIX ".html")

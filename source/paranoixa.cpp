@@ -3,6 +3,7 @@
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
+#include "renderer/d3d12u/d3d12u_renderer.hpp"
 #include "renderer/renderer.hpp"
 #include "renderer/vulkan/vulkan_renderer.hpp"
 #include "renderer/webgpu/webgpu_renderer.hpp"
@@ -54,9 +55,13 @@ Paranoixa::Paranoixa(const Paranoixa::Desc &desc)
   uint32_t windowFlags = 0;
 #ifndef __EMSCRIPTEN__
   switch (desc.api) {
+  case GraphicsAPI::D3D12U:
+    renderer = MakeUnique<D3d12uRenderer>(allocator, allocator);
+    windowName = "Paranoixa ( Native D3D12 Ultimate )";
+    break;
   case GraphicsAPI::WebGPU: {
-    renderer = MakeUnique<WebGPURenderer>(allocator);
-    windowName = "Paranoixa ( Native WGPU )";
+    renderer = MakeUnique<WebGPURenderer>(allocator, allocator);
+    windowName = "Paranoixa ( Native WebGPU )";
     break;
   }
   case GraphicsAPI::Vulkan:
