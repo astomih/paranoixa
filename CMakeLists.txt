@@ -4,6 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 set(CMAKE_CXX_STANDARD 23)
 
 project(paranoixa)
+add_subdirectory(source/phonon)
 add_subdirectory(test)
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 
@@ -44,6 +45,7 @@ if(WIN32)
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/library/imgui
+    ${CMAKE_SOURCE_DIR}/library/imnodes
     ${CMAKE_SOURCE_DIR}/library/SDL/include
     ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_SOURCE_DIR}/library/volk
@@ -53,7 +55,7 @@ if(WIN32)
   file(GLOB_RECURSE
     PARANOIXA_INCLUDE_FILES
     ${CMAKE_SOURCE_DIR}/include/paranoixa/*.hpp
-    ${CMAKE_SOURCE_DIR}/source/*.hpp
+    ${CMAKE_SOURCE_DIR}/source/paranoixa/*.hpp
   )
 endif()
 
@@ -61,14 +63,14 @@ if(EMSCRIPTEN)
   include_directories(
     ${CMAKE_SOURCE_DIR}/include/paranoixa
     ${CMAKE_SOURCE_DIR}/library/imgui
+    ${CMAKE_SOURCE_DIR}/library/imnodes
     ${CMAKE_SOURCE_DIR}/library/tlsf
   )
 endif()
 
-file(GLOB
+file(GLOB_RECURSE
   SOURCE_FILES
-  source/paranoixa.cpp
-  source/*/*.cpp
+  source/paranoixa/*.cpp
   library/tlsf/tlsf.c
 )
 
@@ -76,8 +78,9 @@ if(EMSCRIPTEN)
   file(GLOB
     SOURCE_FILES
     ${SOURCE_FILES}
-    source/renderer/webgpu/*.cpp
+    source/paranoixa/renderer/webgpu/*.cpp
     library/imgui/*.cpp
+    library/imnodes/*.cpp
     library/imgui/backends/imgui_impl_sdl3.cpp
     library/imgui/backends/imgui_impl_wgpu.cpp
   )
@@ -90,10 +93,11 @@ if(WIN32)
     library/*.c
     library/*.cpp
     library/imgui/*.cpp
+    library/imnodes/*.cpp
     library/imgui/backends/imgui_impl_sdl3.cpp
     library/imgui/backends/imgui_impl_vulkan.cpp
     library/imgui/backends/imgui_impl_wgpu.cpp
-    source/*/*/*.cpp
+    source/paranoixa/*/*/*.cpp
   )
   find_library(Vulkan SDL3)
 endif()

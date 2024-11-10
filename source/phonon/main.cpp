@@ -147,7 +147,7 @@ int main() {
 
     auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::Vulkan});
     SDL_AudioSpec desiredSpec;
-    desiredSpec.freq = 8000;            // サンプルレート
+    desiredSpec.freq = 44100;           // サンプルレート
     desiredSpec.format = SDL_AUDIO_F32; // 32ビットのオーディオフォーマット
     desiredSpec.channels = 2;           // ステレオ
     stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
@@ -158,6 +158,7 @@ int main() {
 
       SDL_ResumeAudioStreamDevice(stream);
     }
+    SDL_SetAudioStreamGain(stream, 0.1f);
     example::NodeEditorInitialize();
     app.GetRenderer()->AddGuiUpdateCallBack([]() {
       struct Node {
@@ -172,21 +173,36 @@ int main() {
 
       constexpr int minimum_audio = (8000 * sizeof(float)) / 2;
       if (SDL_GetAudioStreamAvailable(stream) < minimum_audio) {
-        int i;
+        int i, n;
         static float j = 0;
-        float samples[1024];
+        float samples[44100] = {};
+        // sine
         for (i = 0; i < SDL_arraysize(samples); i++) {
-          const float time = j / 8000.0f;
-          constexpr int sine_freq = 100;
-          samples[i] = SDL_sinf(6.283185f * sine_freq * time);
+          const float time = j / 44100.0f;
+          constexpr int sine_freq = 500;
+//samples[i] += SDL_sinf(6.283185f * sine_freq * time);
           j++;
+        }
+        j = 0;
+        // Sawtooth
+        for (i = 1; i <= 44; i++) {
+          for (n = 0; n < 44100; n++) {
+            const float time = n / 44100.0f;
+            constexpr int sine_freq = 500;
+            samples[n] += 1.0f / i * SDL_sinf(6.283185f  *i* sine_freq * time);
+            j++;
+          }
+        }
+            float gain = 0.01f;
+        for (n = 0; n < 44100; n++) {
+          
+            samples[n] *= gain;
         }
         int rc = SDL_PutAudioStreamData(stream, samples, sizeof(samples));
         if (rc == -1) {
           printf("Uhoh, failed to put samples in stream: %s\n", SDL_GetError());
         }
       }
-
       // ImGui::End();
     });
     app.Run();

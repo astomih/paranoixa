@@ -1,9 +1,11 @@
 #ifndef PARANOIXA_RENDERER_HPP
 #define PARANOIXA_RENDERER_HPP
 #include <filesystem>
+#include <functional>
 #include <vector>
 
 #include "../memory/allocator.hpp"
+
 namespace paranoixa {
 class FileLoader {
 public:
@@ -12,6 +14,7 @@ public:
 };
 
 std::unique_ptr<FileLoader> &GetFileLoader();
+
 class Renderer {
 public:
   Renderer() = default;
@@ -21,6 +24,8 @@ public:
 
   virtual void BeginFrame() = 0;
   virtual void EndFrame() = 0;
+
+  virtual void AddGuiUpdateCallBack(std::function<void()> callBack) = 0;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_RENDERER_HPP

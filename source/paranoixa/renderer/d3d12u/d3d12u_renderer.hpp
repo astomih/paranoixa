@@ -17,12 +17,14 @@ public:
   void BeginFrame() override;
   void EndFrame() override;
 
+  void AddGuiUpdateCallBack(std::function<void()> callBack) override;
+
 private:
   AllocatorPtr allocator;
-  ID3D12Device* device;
+  ID3D12Device *device;
 #ifdef _DEBUG
-  ID3D12Debug* d3d12Debug;
-  ID3D12Debug3* d3d12Debug3;
+  ID3D12Debug *d3d12Debug;
+  ID3D12Debug3 *d3d12Debug3;
 #endif
 };
 } // namespace paranoixa

@@ -24,6 +24,7 @@ public:
   void BeginFrame() override;
   void EndFrame() override;
 
+  void AddGuiUpdateCallBack(std::function<void()> callBack) override;
   struct Texture {
     Texture() = default;
     ~Texture() = default;
@@ -108,11 +109,14 @@ private:
     VkBuffer buffer;
     VmaAllocation memory;
   } vertexBuffer;
+  void *pWindow;
   int width, height;
   static constexpr size_t MAX_FRAMES_IN_FLIGHT = 2;
   Frame frames[MAX_FRAMES_IN_FLIGHT];
   int currentFrameIndex = 0;
   uint32_t swapchainImageIndex = 0;
+
+  std::vector<std::function<void()>> guiCallBacks;
 };
 } // namespace paranoixa
 #endif // __EMSCRIPTEN__

@@ -25,10 +25,9 @@ namespace paranoixa {
   ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
 WebGPURenderer::WebGPURenderer(AllocatorPtr allocator)
     : instance(nullptr), adapter(nullptr), device(nullptr), queue(nullptr),
-      surface(nullptr), texture{}, sampler(nullptr), pipeline(nullptr),
-      bindGroup(nullptr), vertexBuffer(nullptr),
-      surfaceFormat(WGPUTextureFormat_Undefined), targetView(nullptr),
-      encoder(nullptr) {}
+      surface(nullptr), targetView(nullptr), bindGroup(nullptr),
+      surfaceFormat(WGPUTextureFormat_Undefined), texture{}, sampler(nullptr),
+      pipeline(nullptr), vertexBuffer(nullptr), encoder(nullptr) {}
 WebGPURenderer::~WebGPURenderer() {
   ImGui_ImplWGPU_Shutdown();
   ImGui_ImplSDL3_Shutdown();
@@ -59,7 +58,7 @@ void WebGPURenderer::Initialize(void *window) {
   PrepareQueue();
   PrepareSurface(window);
   int width, height;
-  SDL_GetWindowSize((SDL_Window *)window, &width, &height);
+  SDL_GetWindowSize(static_cast<SDL_Window *>(window), &width, &height);
   ConfigSurface(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
   // Load texture from SDL
   SDL_Surface *surface = SDL_LoadBMP("res/texture.bmp");
@@ -94,7 +93,7 @@ void WebGPURenderer::Initialize(void *window) {
   io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
   io.IniFilename = nullptr;
   ImGui::StyleColorsDark();
-  if (not ImGui_ImplSDL3_InitForOther((SDL_Window *)window))
+  if (not ImGui_ImplSDL3_InitForOther(static_cast<SDL_Window *>(window)))
     return;
   ImGui_ImplWGPU_InitInfo init_info{};
   init_info.Device = device;
@@ -174,18 +173,18 @@ void WebGPURenderer::BeginFrame() {
   wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, vertexBuffer, 0, 192);
   wgpuRenderPassEncoderDraw(renderPass, 6, 1, 0, 0);
 
-   ImGui_ImplSDL3_NewFrame();
-   ImGui_ImplWGPU_NewFrame();
-   ImGui::NewFrame();
-   ImGui::ShowDemoWindow();
-   ImGui::Begin("FPS");
-   ImGuiIO &io = ImGui::GetIO();
-   ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-               1000.0f / io.Framerate, io.Framerate);
-   ImGui::End();
-   ImGui::Render();
-   ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
-   ImGui::EndFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui_ImplWGPU_NewFrame();
+  ImGui::NewFrame();
+  ImGui::ShowDemoWindow();
+  ImGui::Begin("FPS");
+  ImGuiIO &io = ImGui::GetIO();
+  ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+              1000.0f / io.Framerate, io.Framerate);
+  ImGui::End();
+  ImGui::Render();
+  ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), renderPass);
+  ImGui::EndFrame();
   wgpuRenderPassEncoderEnd(renderPass);
 }
 void WebGPURenderer::EndFrame() {
@@ -204,6 +203,7 @@ void WebGPURenderer::EndFrame() {
   wgpuSurfacePresent(surface);
 #endif
 }
+void WebGPURenderer::AddGuiUpdateCallBack(std::function<void()> callBack) {}
 void WebGPURenderer::PrepareSurface(void *window) {
 #ifdef __EMSCRIPTEN__
   WGPUSurfaceDescriptorFromCanvasHTMLSelector fromCanvasHTMLSelector = {};
@@ -220,20 +220,20 @@ void WebGPURenderer::PrepareSurface(void *window) {
 #endif
 #ifdef _WIN32
   {
-    HWND hwnd = (HWND)SDL_GetPointerProperty(
-        SDL_GetWindowProperties((::SDL_Window *)window),
-        SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
-    HINSTANCE hinstance = GetModuleHandle(NULL);
+    auto hwnd = static_cast<HWND>(SDL_GetPointerProperty(
+        SDL_GetWindowProperties(static_cast<SDL_Window *>(window)),
+        SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+    HINSTANCE hinstance = GetModuleHandle(nullptr);
     WGPUSurfaceSourceWindowsHWND desc{
         .chain =
             WGPUChainedStruct{
-                .next = NULL,
+                .next = nullptr,
                 .sType = WGPUSType_SurfaceSourceWindowsHWND,
             },
         .hinstance = hinstance,
         .hwnd = hwnd};
     auto descriptor =
-        WGPUSurfaceDescriptor{.nextInChain = &desc.chain, .label = NULL};
+        WGPUSurfaceDescriptor{.nextInChain = &desc.chain, .label = nullptr};
     surface = wgpuInstanceCreateSurface(instance, &descriptor);
   }
 #endif
@@ -259,7 +259,7 @@ void WebGPURenderer::PrepareAdapter() {
   WGPURequestAdapterOptions adapterOpts = {};
   adapterOpts.nextInChain = nullptr;
   auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status,
-                                  WGPUAdapter adapter, char const *message,
+                                  WGPUAdapter adapter, WGPUStringView message,
                                   void *pUserData) {
     UserData &userData = *reinterpret_cast<UserData *>(pUserData);
     userData.adapterRequested = true;
@@ -267,14 +267,14 @@ void WebGPURenderer::PrepareAdapter() {
       userData.adapter = adapter;
     } else {
       std::cout << "Could not get WebGPU adapter: ";
-      if (message) {
-        std::cout << message;
+      if (message.data) {
+        std::cout << message.data;
       }
     }
   };
   UserData userData{};
   wgpuInstanceRequestAdapter(instance, nullptr, onAdapterRequestEnded,
-                             reinterpret_cast<void *>(&userData));
+                             &userData);
 #ifdef __EMSCRIPTEN__
   while (userData.adapterRequested == false) {
     emscripten_sleep(100);
@@ -290,49 +290,49 @@ void WebGPURenderer::PrepareDevice() {
   UserData userData;
 
   auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status,
-                                 WGPUDevice device, char const *message,
+                                 WGPUDevice device, WGPUStringView message,
                                  void *pUserData) {
     UserData &userData = *reinterpret_cast<UserData *>(pUserData);
     if (status == WGPURequestDeviceStatus_Success) {
       userData.device = device;
     } else {
-      std::cout << "Could not get WebGPU device: " << message << std::endl;
+      std::cout << "Could not get WebGPU device: " << message.data << std::endl;
     }
     userData.requestEnded = true;
   };
   WGPUDeviceDescriptor descriptor{};
   descriptor.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowProcessEvents;
   descriptor.deviceLostCallbackInfo.callback =
-      [](WGPUDevice const *device, WGPUDeviceLostReason reason,
-         char const *message, void *userdata) {
+      [](const WGPUDevice *device, WGPUDeviceLostReason reason,
+         WGPUStringView message, void *userdata) {
         std::cout << "Device lost: reason " << reason;
-        if (message)
-          std::cout << " (" << message << ")";
+        if (message.data)
+          std::cout << " (" << message.data << ")";
         std::cout << std::endl;
       };
   descriptor.uncapturedErrorCallbackInfo2.callback =
-      [](WGPUDevice const *device, WGPUErrorType type, char const *message,
+      [](const WGPUDevice *device, WGPUErrorType type, WGPUStringView message,
          void *userdata1, void *userdata2) {
         switch (type) {
         case WGPUErrorType_NoError:
           break;
         case WGPUErrorType_Validation:
-          std::cout << "Validation error: " << message << std::endl;
+          std::cout << "Validation error: " << message.data << std::endl;
           break;
         case WGPUErrorType_OutOfMemory:
-          std::cout << "Out of Memory: " << message << std::endl;
+          std::cout << "Out of Memory: " << message.data << std::endl;
           break;
         case WGPUErrorType_Internal:
-          std::cout << "Internal error: " << message << std::endl;
+          std::cout << "Internal error: " << message.data << std::endl;
           break;
         case WGPUErrorType_Unknown:
-          std::cout << "Unknown error: " << message << std::endl;
+          std::cout << "Unknown error: " << message.data << std::endl;
           break;
         case WGPUErrorType_DeviceLost:
-          std::cout << "Device lost: " << message << std::endl;
+          std::cout << "Device lost: " << message.data << std::endl;
           break;
         case WGPUErrorType_Force32:
-          std::cout << "Force32 error: " << message << std::endl;
+          std::cout << "Force32 error: " << message.data << std::endl;
           break;
         default:
           break;
@@ -340,7 +340,7 @@ void WebGPURenderer::PrepareDevice() {
       };
 
   wgpuAdapterRequestDevice(adapter, &descriptor, onDeviceRequestEnded,
-                           (void *)&userData);
+                           &userData);
 #ifdef __EMSCRIPTEN__
   while (!userData.requestEnded) {
     emscripten_sleep(100);
@@ -558,7 +558,7 @@ void WebGPURenderer::InitializePipeline() {
   // Default value as well (irrelevant for count = 1 anyways)
   pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
-  const WGPUBindGroupLayoutEntry entry[] = {
+  constexpr WGPUBindGroupLayoutEntry entry[] = {
       {
           .binding = 0,
           .visibility = WGPUShaderStage_Vertex | WGPUShaderStage_Fragment,

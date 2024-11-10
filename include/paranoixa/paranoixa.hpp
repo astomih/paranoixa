@@ -25,13 +25,13 @@ enum class GraphicsAPI {
   WebGPU,
 };
 
-
 class Paranoixa {
 public:
   struct Desc {
     AllocatorPtr allocator;
     GraphicsAPI api;
   };
+
   Paranoixa(const Desc &desc);
   ~Paranoixa();
   Ref<class Renderer> GetRenderer();

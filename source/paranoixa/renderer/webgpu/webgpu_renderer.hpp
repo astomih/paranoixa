@@ -9,11 +9,13 @@ namespace paranoixa {
 class WebGPURenderer : public Renderer {
 public:
   WebGPURenderer(AllocatorPtr pAllocator);
-  ~WebGPURenderer();
+  ~WebGPURenderer() override;
   void Initialize(void *window) override;
   void ProcessEvent(void *event) override;
   void BeginFrame() override;
   void EndFrame() override;
+
+  void AddGuiUpdateCallBack(std::function<void()> callBack) override;
   class Texture {
   public:
     Texture() = default;

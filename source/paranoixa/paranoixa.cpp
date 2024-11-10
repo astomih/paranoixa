@@ -42,17 +42,17 @@ bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
   }
   return false;
 }
-static ::SDL_Window *window = nullptr;
+static SDL_Window *window = nullptr;
 static bool running = true;
 Paranoixa::~Paranoixa() {
   renderer.Reset();
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
-Paranoixa::Paranoixa(const Paranoixa::Desc &desc)
+Paranoixa::Paranoixa(const Desc &desc)
     : allocator(desc.allocator), renderer(desc.allocator) {
   std::string windowName;
-  uint32_t windowFlags = 0;
+  uint32_t windowFlags = SDL_WINDOW_RESIZABLE;
 #ifndef __EMSCRIPTEN__
   switch (desc.api) {
   case GraphicsAPI::D3D12U:
@@ -75,7 +75,7 @@ Paranoixa::Paranoixa(const Paranoixa::Desc &desc)
   windowName = "Paranoixa ( WASM )";
 #endif
 
-  if (!SDL_Init(SDL_INIT_EVENTS)) {
+  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
                  SDL_GetError());
   }

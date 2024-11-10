@@ -8,6 +8,7 @@
 #include "backends/imgui_impl_sdl3.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#include <imnodes.h>
 
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
@@ -18,17 +19,18 @@
 #include <fstream>
 
 #include "vulkan_renderer.hpp"
+
 namespace paranoixa {
 
 VulkanRenderer::VulkanRenderer()
-    : device(VK_NULL_HANDLE), graphicsQueue(VK_NULL_HANDLE),
-      instance(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE),
-      surface(VK_NULL_HANDLE), graphicsQueueIndex(0), swapchain(VK_NULL_HANDLE),
-      commandPool(VK_NULL_HANDLE), descriptorPool(VK_NULL_HANDLE),
-      surfaceFormat(), frames(), pipelineLayout(VK_NULL_HANDLE),
-      pipeline(VK_NULL_HANDLE), vertexBuffer(), swapchainState(),
-      swapchainImageIndex(0), currentFrameIndex(0), width(0), height(0),
-      physicalDeviceMemoryProperties() {}
+    : instance(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE),
+      physicalDeviceMemoryProperties(), graphicsQueueIndex(0),
+      device(VK_NULL_HANDLE), graphicsQueue(VK_NULL_HANDLE),
+      surface(VK_NULL_HANDLE), surfaceFormat(), swapchain(VK_NULL_HANDLE),
+      swapchainState(), commandPool(VK_NULL_HANDLE),
+      descriptorPool(VK_NULL_HANDLE), pipelineLayout(VK_NULL_HANDLE),
+      pipeline(VK_NULL_HANDLE), vertexBuffer(), width(0), height(0), frames(),
+      currentFrameIndex(0), swapchainImageIndex(0) {}
 VulkanRenderer::~VulkanRenderer() { Finalize(); }
 void VulkanRenderer::Finalize() {
   vkDeviceWaitIdle(device);
@@ -69,6 +71,7 @@ void VulkanRenderer::Finalize() {
   vkDestroyInstance(instance, nullptr);
 }
 void VulkanRenderer::Initialize(void *window) {
+  pWindow = window;
   auto *sdlWindow = static_cast<SDL_Window *>(window);
   SDL_GetWindowSize(sdlWindow, &width, &height);
   volkInitialize();
@@ -112,6 +115,7 @@ void VulkanRenderer::Initialize(void *window) {
   CreateDescriptorPool(descriptorPoolForImGui);
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImNodes::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
   io.ConfigFlags |=
@@ -123,7 +127,7 @@ void VulkanRenderer::Initialize(void *window) {
   ImGui_ImplSDL3_InitForVulkan(sdlWindow);
   ImGui_ImplVulkan_LoadFunctions(
       [](const char *functionName, void *userArgs) {
-        VulkanRenderer *renderer = static_cast<VulkanRenderer *>(userArgs);
+        auto renderer = static_cast<VulkanRenderer *>(userArgs);
         auto vkDevice = renderer->device;
         auto vkInstance = renderer->instance;
         auto devFuncAddr = vkGetDeviceProcAddr(vkDevice, functionName);
@@ -161,6 +165,15 @@ void VulkanRenderer::ProcessEvent(void *event) {
   ImGui_ImplSDL3_ProcessEvent(static_cast<SDL_Event *>(event));
 }
 void VulkanRenderer::BeginFrame() {
+  int newWidth, newHeight;
+  auto *sdlWindow = reinterpret_cast<SDL_Window *>(pWindow);
+  SDL_GetWindowSize(sdlWindow, &newWidth, &newHeight);
+  if (width != newWidth || height != newHeight) {
+    this->RecreateSwapchain(newWidth, newHeight);
+    width = newWidth;
+    height = newHeight;
+  }
+
   this->NewFrame();
   this->ProcessFrame();
 }
@@ -191,6 +204,10 @@ void VulkanRenderer::EndFrame() {
                                .pImageIndices = &swapchainImageIndex};
   vkQueuePresentKHR(graphicsQueue, &presentInfo);
 }
+void VulkanRenderer::AddGuiUpdateCallBack(std::function<void()> callBack) {
+  this->guiCallBacks.push_back(callBack);
+}
+
 void VulkanRenderer::NewFrame() {
   auto &frameInfo = this->frames[currentFrameIndex];
   auto fence = frameInfo.inFlightFence;
@@ -231,7 +248,8 @@ void VulkanRenderer::ProcessFrame() {
       .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
       .renderArea =
           {
-              .extent = {uint32_t(width), uint32_t(height)},
+              .extent = {static_cast<uint32_t>(width),
+                         static_cast<uint32_t>(height)},
           },
       .layerCount = 1,
       .colorAttachmentCount = 1,
@@ -251,7 +269,9 @@ void VulkanRenderer::ProcessFrame() {
   ImGui_ImplSDL3_NewFrame();
   ImGui_ImplVulkan_NewFrame();
   ImGui::NewFrame();
-  ImGui::ShowDemoWindow();
+  for (auto &callBack : this->guiCallBacks) {
+    callBack();
+  }
   ImGui::Render();
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
@@ -302,7 +322,7 @@ void VulkanRenderer::CreateInstance(void *window) {
   createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
   createInfo.ppEnabledLayerNames = layers.data();
   VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
-  if (result == VkResult::VK_SUCCESS) {
+  if (result == VK_SUCCESS) {
     volkLoadInstance(instance);
   }
 }
@@ -349,7 +369,7 @@ void VulkanRenderer::CreateDevice() {
   vulkan13Features.synchronization2 = VK_TRUE;
   vulkan13Features.maintenance4 = VK_TRUE;
   vkGetPhysicalDeviceFeatures2(physicalDevice, &physFeatures2);
-  const float queuePriorities[] = {1.f};
+  constexpr float queuePriorities[] = {1.f};
   VkDeviceQueueCreateInfo deviceQueueCreateInfo{
       .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
       .queueFamilyIndex = graphicsQueueIndex,
@@ -364,14 +384,14 @@ void VulkanRenderer::CreateDevice() {
   deviceCreateInfo.pNext = &physFeatures2;
   auto result =
       vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device);
-  if (result == VkResult::VK_SUCCESS) {
+  if (result == VK_SUCCESS) {
     volkLoadDevice(device);
     vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
   }
 }
 void VulkanRenderer::CreateSurface(void *window) {
-  SDL_Vulkan_CreateSurface((SDL_Window *)window, this->instance, nullptr,
-                           &this->surface);
+  SDL_Vulkan_CreateSurface(static_cast<SDL_Window *>(window), this->instance,
+                           nullptr, &this->surface);
   // Select format
   uint32_t count = 0;
   vkGetPhysicalDeviceSurfaceFormatsKHR(this->physicalDevice, this->surface,
@@ -380,8 +400,8 @@ void VulkanRenderer::CreateSurface(void *window) {
   vkGetPhysicalDeviceSurfaceFormatsKHR(this->physicalDevice, this->surface,
                                        &count, formats.data());
 
-  const VkFormat desireFormats[] = {VK_FORMAT_B8G8R8A8_UNORM,
-                                    VK_FORMAT_R8G8B8A8_UNORM};
+  constexpr VkFormat desireFormats[] = {VK_FORMAT_B8G8R8A8_UNORM,
+                                        VK_FORMAT_R8G8B8A8_UNORM};
   this->surfaceFormat.format = VK_FORMAT_UNDEFINED;
   bool found = false;
   for (int i = 0; i < std::size(desireFormats) && !found; ++i) {
@@ -667,7 +687,8 @@ void VulkanRenderer::PrepareTriangle() {
                            0.0f,  -0.5f, 0.5f, 0, 1, 0,
                            -0.5f, 0.5f,  0.5f, 1, 0, 0};
   VkBufferCreateInfo bufferCI{.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                              .size = uint32_t(sizeof(triangleVerts)),
+                              .size =
+                                  static_cast<uint32_t>(sizeof(triangleVerts)),
                               .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
   VmaAllocationCreateInfo allocationCreateInfo{};
@@ -693,7 +714,7 @@ void VulkanRenderer::PrepareTriangle() {
 
   VkVertexInputBindingDescription vertexBindingDesc{
       .binding = 0,
-      .stride = uint32_t(sizeof(float)) * 6,
+      .stride = static_cast<uint32_t>(sizeof(float)) * 6,
       .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
   };
   VkVertexInputAttributeDescription vertexAttribs[] = {
@@ -721,14 +742,15 @@ void VulkanRenderer::PrepareTriangle() {
   VkViewport viewport{
       .x = 0,
       .y = 0,
-      .width = float(width),
-      .height = float(height),
+      .width = static_cast<float>(width),
+      .height = static_cast<float>(height),
       .minDepth = 0.0f,
       .maxDepth = 1.0f,
   };
   VkRect2D scissor{
       .offset = {0, 0},
-      .extent = {.width = uint32_t(width), .height = uint32_t(height)},
+      .extent = {.width = static_cast<uint32_t>(width),
+                 .height = static_cast<uint32_t>(height)},
   };
 
   VkPipelineViewportStateCreateInfo viewportState{
@@ -793,7 +815,7 @@ void VulkanRenderer::PrepareTriangle() {
 
   VkGraphicsPipelineCreateInfo pipelineCreateInfo{
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .stageCount = uint32_t(shaderStages.size()),
+      .stageCount = static_cast<uint32_t>(shaderStages.size()),
       .pStages = shaderStages.data(),
       .pVertexInputState = &vertexInput,
       .pInputAssemblyState = &inputAssembly,
@@ -839,7 +861,8 @@ void VulkanRenderer::PrepareTexture() {
       1.f,  1.f,  0.f, 1, 0, 1, 0, 0, //
   };
   VkBufferCreateInfo bufferCI{.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                              .size = uint32_t(sizeof(triangleVerts)),
+                              .size =
+                                  static_cast<uint32_t>(sizeof(triangleVerts)),
                               .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
                                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT};
   VmaAllocationCreateInfo allocationCreateInfo{};
@@ -865,7 +888,7 @@ void VulkanRenderer::PrepareTexture() {
 
   VkVertexInputBindingDescription vertexBindingDesc{
       .binding = 0,
-      .stride = uint32_t(sizeof(float)) * 8,
+      .stride = static_cast<uint32_t>(sizeof(float)) * 8,
       .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
   };
   VkVertexInputAttributeDescription vertexAttribs[] = {
@@ -897,14 +920,15 @@ void VulkanRenderer::PrepareTexture() {
   VkViewport viewport{
       .x = 0,
       .y = 0,
-      .width = float(width),
-      .height = float(height),
+      .width = static_cast<float>(width),
+      .height = static_cast<float>(height),
       .minDepth = 0.0f,
       .maxDepth = 1.0f,
   };
   VkRect2D scissor{
       .offset = {0, 0},
-      .extent = {.width = uint32_t(width), .height = uint32_t(height)},
+      .extent = {.width = static_cast<uint32_t>(width),
+                 .height = static_cast<uint32_t>(height)},
   };
 
   VkPipelineViewportStateCreateInfo viewportState{
@@ -969,7 +993,7 @@ void VulkanRenderer::PrepareTexture() {
 
   VkGraphicsPipelineCreateInfo pipelineCreateInfo{
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .stageCount = uint32_t(shaderStages.size()),
+      .stageCount = static_cast<uint32_t>(shaderStages.size()),
       .pStages = shaderStages.data(),
       .pVertexInputState = &vertexInput,
       .pInputAssemblyState = &inputAssembly,
@@ -1129,7 +1153,8 @@ VulkanRenderer::Texture VulkanRenderer::CreateTexture(const void *data,
               .layerCount = 1,
           },
       .imageOffset = {0, 0, 0},
-      .imageExtent = {uint32_t(width), uint32_t(height), 1},
+      .imageExtent = {static_cast<uint32_t>(width),
+                      static_cast<uint32_t>(height), 1},
   };
   vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, texture.image,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
