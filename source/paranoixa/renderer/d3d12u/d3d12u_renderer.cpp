@@ -39,13 +39,16 @@ D3d12uRenderer::~D3d12uRenderer() {
 
 void D3d12uRenderer::Initialize(void *window) {
   auto sdlWindow = static_cast<SDL_Window *>(window);
-  auto hwnd = static_cast<HWND>(
+  pWindow = sdlWindow;
+  SDL_GetWindowSize(sdlWindow, &width, &height);
+  hWindow = static_cast<HWND>(
       SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWindow),
                              SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
 
   PrepareDevice();
   PrepareCommandQueue();
   PrepareDescriptorHeap();
+  PrepareCommandAllocator();
 
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
@@ -190,6 +193,32 @@ D3d12uRenderer::GetDescriptorHeapInfo(D3D12_DESCRIPTOR_HEAP_TYPE type) {
   default:
     return nullptr;
   }
+}
+void D3d12uRenderer::PrepareCommandAllocator() {
+  waitFence = CreateEvent(NULL, FALSE, FALSE, NULL);
+  device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence));
+
+  for (UINT i = 0; i < 2; i++) {
+    auto &frame = frameInfo[i];
+    frame.fenceValue = 0;
+    device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                   IID_PPV_ARGS(&frame.commandAllocator));
+  }
+}
+void D3d12uRenderer::PrepareSwapChain() {
+  DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
+      .Width = static_cast<UINT>(width),
+      .Height = static_cast<UINT>(height),
+      .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+      .SampleDesc = {.Count = 1, .Quality = 0},
+      .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+      .BufferCount = 2,
+      .Scaling = DXGI_SCALING_STRETCH,
+      .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD};
+  IDXGISwapChain1 *pSwapChain1 = nullptr;
+  dxgiFactory->CreateSwapChainForHwnd(commandQueue,hWindow,&swapChainDesc, nullptr,nullptr,&pSwapChain1);
+  QUERY_INTERFACE(pSwapChain1,swapChain);
+  dxgiFactory->MakeWindowAssociation(hWindow,DXGI_MWA_NO_ALT_ENTER);
 }
 
 // namespace paranoixa

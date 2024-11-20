@@ -33,6 +33,12 @@ private:
     UINT usedIndex = 0;
     std::vector<DescriptorHandle> handles;
   };
+  struct FrameInfo {
+    UINT64 fenceValue = 0;
+    ID3D12CommandAllocator* commandAllocator;
+    DescriptorHandle rtvDescriptor;
+    ID3D12Resource1* targetBuffer;
+  };
   void PrepareDevice();
   void PrepareCommandQueue();
   void PrepareDescriptorHeap();
@@ -40,10 +46,12 @@ private:
   void DeallocateDescriptor(DescriptorHandle descriptor);
   ID3D12DescriptorHeap* GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type);
   DescriptorHeapInfo* GetDescriptorHeapInfo(D3D12_DESCRIPTOR_HEAP_TYPE);
-
-  void Prepare();
+  void PrepareCommandAllocator();
+  void PrepareSwapChain();
 
   AllocatorPtr allocator;
+  HWND hWindow;
+  void* pWindow;
   ID3D12Device *device;
 #ifdef _DEBUG
   ID3D12Debug *d3d12Debug;
@@ -57,6 +65,11 @@ private:
   DescriptorHeapInfo srvDescriptorHeap;
   DescriptorHeapInfo samplerDescriptorHeap;
   ID3D12CommandAllocator *commandAllocator;
+  void* waitFence;
+  ID3D12Fence *frameFence;
+  FrameInfo frameInfo[2];
+  IDXGISwapChain4* swapChain;
+  int width, height;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_D3D12U_RENDERER_HPP
