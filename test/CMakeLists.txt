@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(test)
+project(paranoixa_test)
 set(CMAKE_CXX_STANDARD 23)
 include_directories(
 ${CMAKE_SOURCE_DIR}/include
@@ -22,8 +22,8 @@ if(EMSCRIPTEN)
 		-s USE_WEBGPU \
 		-s ASYNCIFY=1 \
 		--preload-file res")
-	add_executable(test test.cpp)
-	target_link_libraries(test PRIVATE paranoixa)
+	add_executable(paranoixa_test test.cpp)
+	target_link_libraries(paranoixa_test PRIVATE paranoixa)
 	set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
 
@@ -31,6 +31,6 @@ if(WIN32)
 	link_directories(
 		..
 	)
-	add_executable(test test.cpp)
-	target_link_libraries(test PRIVATE paranoixa)
+	add_executable(paranoixa_test test.cpp)
+	target_link_libraries(paranoixa_test PRIVATE paranoixa)
 endif()
