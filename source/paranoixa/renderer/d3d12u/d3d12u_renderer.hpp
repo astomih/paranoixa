@@ -35,40 +35,42 @@ private:
   };
   struct FrameInfo {
     UINT64 fenceValue = 0;
-    ID3D12CommandAllocator* commandAllocator;
+    ID3D12CommandAllocator *commandAllocator;
     DescriptorHandle rtvDescriptor;
-    ID3D12Resource1* targetBuffer;
+    ID3D12Resource1 *targetBuffer;
   };
   void PrepareDevice();
   void PrepareCommandQueue();
   void PrepareDescriptorHeap();
   DescriptorHandle AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE type);
   void DeallocateDescriptor(DescriptorHandle descriptor);
-  ID3D12DescriptorHeap* GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type);
-  DescriptorHeapInfo* GetDescriptorHeapInfo(D3D12_DESCRIPTOR_HEAP_TYPE);
+  ID3D12DescriptorHeap *GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type);
+  DescriptorHeapInfo *GetDescriptorHeapInfo(D3D12_DESCRIPTOR_HEAP_TYPE);
   void PrepareCommandAllocator();
   void PrepareSwapChain();
+  void PrepareRenderTarget();
 
+  UINT frameCount = 2;
   AllocatorPtr allocator;
   HWND hWindow;
-  void* pWindow;
+  void *pWindow;
   ID3D12Device *device;
 #ifdef _DEBUG
   ID3D12Debug *d3d12Debug;
   ID3D12Debug3 *d3d12Debug3;
 #endif
-  IDXGIFactory7* dxgiFactory;
-  IDXGIAdapter4* adapter;
+  IDXGIFactory7 *dxgiFactory;
+  IDXGIAdapter4 *adapter;
   ID3D12CommandQueue *commandQueue;
   DescriptorHeapInfo rtvDescriptorHeap;
   DescriptorHeapInfo dsvDescriptorHeap;
   DescriptorHeapInfo srvDescriptorHeap;
   DescriptorHeapInfo samplerDescriptorHeap;
   ID3D12CommandAllocator *commandAllocator;
-  void* waitFence;
+  void *waitFence;
   ID3D12Fence *frameFence;
   FrameInfo frameInfo[2];
-  IDXGISwapChain4* swapChain;
+  IDXGISwapChain4 *swapChain;
   int width, height;
 };
 } // namespace paranoixa

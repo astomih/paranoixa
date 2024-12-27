@@ -6,7 +6,9 @@ set(CMAKE_CXX_STANDARD 23)
 project(paranoixa)
 add_subdirectory(source/phonon)
 add_subdirectory(test)
+set(CMAKE_FOLDER "SDL3")
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
+unset(CMAKE_FOLDER)
 
 if(NOT MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
@@ -36,7 +38,9 @@ if(WIN32)
 
     set(DAWN_FETCH_DEPENDENCIES ON)
 
+    set(CMAKE_FOLDER "dawn")
     add_subdirectory(library/dawn EXCLUDE_FROM_ALL)
+    unset(CMAKE_FOLDER)
   endif()
 
   set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")

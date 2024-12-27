@@ -198,7 +198,7 @@ void D3d12uRenderer::PrepareCommandAllocator() {
   waitFence = CreateEvent(NULL, FALSE, FALSE, NULL);
   device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence));
 
-  for (UINT i = 0; i < 2; i++) {
+  for (UINT i = 0; i < frameCount; i++) {
     auto &frame = frameInfo[i];
     frame.fenceValue = 0;
     device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -212,13 +212,25 @@ void D3d12uRenderer::PrepareSwapChain() {
       .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
       .SampleDesc = {.Count = 1, .Quality = 0},
       .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-      .BufferCount = 2,
+      .BufferCount = frameCount,
       .Scaling = DXGI_SCALING_STRETCH,
       .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD};
   IDXGISwapChain1 *pSwapChain1 = nullptr;
-  dxgiFactory->CreateSwapChainForHwnd(commandQueue,hWindow,&swapChainDesc, nullptr,nullptr,&pSwapChain1);
-  QUERY_INTERFACE(pSwapChain1,swapChain);
-  dxgiFactory->MakeWindowAssociation(hWindow,DXGI_MWA_NO_ALT_ENTER);
+  dxgiFactory->CreateSwapChainForHwnd(commandQueue, hWindow, &swapChainDesc,
+                                      nullptr, nullptr, &pSwapChain1);
+  QUERY_INTERFACE(pSwapChain1, swapChain);
+  dxgiFactory->MakeWindowAssociation(hWindow, DXGI_MWA_NO_ALT_ENTER);
+}
+void D3d12uRenderer::PrepareRenderTarget() {
+  for (UINT i = 0; i < frameCount; i++) {
+    ID3D12Resource1* rt;
+    swapChain->GetBuffer(i, IID_PPV_ARGS(&rt));
+
+    auto descriptor = AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    device->CreateRenderTargetView(rt,nullptr,descriptor.hCPU);
+    frameInfo[i].rtvDescriptor = descriptor;
+    frameInfo[i].targetBuffer = rt;
+  }
 }
 
 // namespace paranoixa
