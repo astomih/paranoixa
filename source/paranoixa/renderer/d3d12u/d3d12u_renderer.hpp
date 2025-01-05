@@ -21,12 +21,26 @@ public:
 
   void AddGuiUpdateCallBack(std::function<void()> callBack) override;
 
-private:
+public:
   struct DescriptorHandle {
     D3D12_CPU_DESCRIPTOR_HANDLE hCPU;
     D3D12_GPU_DESCRIPTOR_HANDLE hGPU;
     D3D12_DESCRIPTOR_HEAP_TYPE type;
   };
+  
+  ID3D12Resource1* CreateBuffer(D3D12_RESOURCE_DESC desc, D3D12_HEAP_PROPERTIES heapProperties);
+  ID3D12RootSignature* CreateRootSignature(ID3DBlob* signature);
+  ID3D12PipelineState* CreateGraphicsPipelineState(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc);
+  ID3D12GraphicsCommandList* CreateCommandList();
+  DXGI_FORMAT GetSwapchainFormat() const { return DXGI_FORMAT_R8G8B8A8_UNORM; }
+
+  UINT GetFrameIndex() const { return frameIndex; }
+  DescriptorHandle GetSwapchainBufferDescriptor();
+  ID3D12Resource1* GetSwapchainBufferResource();
+  
+  void Submit(ID3D12CommandList* const commandList);
+  void Present(UINT syncInterval, UINT flags = 0);
+private:
   struct DescriptorHeapInfo {
     ID3D12DescriptorHeap *heap;
     UINT handleSize = 0;
@@ -48,7 +62,10 @@ private:
   DescriptorHeapInfo *GetDescriptorHeapInfo(D3D12_DESCRIPTOR_HEAP_TYPE);
   void PrepareCommandAllocator();
   void PrepareSwapChain();
-  void PrepareRenderTarget();
+  void PrepareRenderTargetView();
+
+
+  void PrepareTriangle();
 
   UINT frameCount = 2;
   AllocatorPtr allocator;
@@ -72,6 +89,12 @@ private:
   FrameInfo frameInfo[2];
   IDXGISwapChain4 *swapChain;
   int width, height;
+  UINT frameIndex;
+
+  ID3D12Resource1* vertexBuffer;
+  ID3D12RootSignature* rootSignature;
+  D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+  ID3D12PipelineState* pipelineState;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_D3D12U_RENDERER_HPP

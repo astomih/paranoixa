@@ -7,6 +7,8 @@ project(paranoixa)
 add_subdirectory(source/phonon)
 add_subdirectory(test)
 set(CMAKE_FOLDER "SDL3")
+set(SDL_SHARED OFF)
+set(SDL_STATIC ON)
 add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 unset(CMAKE_FOLDER)
 
@@ -45,7 +47,7 @@ if(WIN32)
 
   set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
 
-  find_package(Vulkan)
+  find_package(Vulkan REQUIRED)
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/library/imgui
@@ -74,6 +76,7 @@ endif()
 
 file(GLOB_RECURSE
   SOURCE_FILES
+  source/paranoixa/*.hpp
   source/paranoixa/*.cpp
   library/tlsf/tlsf.c
 )

@@ -48,6 +48,8 @@ void D3d12uRenderer::Initialize(void *window) {
   PrepareDevice();
   PrepareCommandQueue();
   PrepareDescriptorHeap();
+  PrepareSwapChain();
+  PrepareRenderTargetView();
   PrepareCommandAllocator();
 
   // Setup Dear ImGui context
@@ -60,11 +62,156 @@ void D3d12uRenderer::Initialize(void *window) {
   // Setup Platform/Renderer bindings
   ImGui_ImplSDL3_InitForD3D(sdlWindow);
   // ImGui_ImplDX12_Init(hwnd, 3, D3D_FEATURE_LEVEL_12_0);
+  frameIndex = this->swapChain->GetCurrentBackBufferIndex();
+
+  PrepareTriangle();
 }
 void D3d12uRenderer::ProcessEvent(void *event) {}
-void D3d12uRenderer::BeginFrame() {}
+void D3d12uRenderer::BeginFrame() {
+  frameInfo[frameIndex].commandAllocator->Reset();
+
+  auto commandList = CreateCommandList();
+  auto renderTarget = GetSwapchainBufferResource();
+
+  auto barrierToRT = D3D12_RESOURCE_BARRIER{
+      .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+      .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+      .Transition = {
+          .pResource = renderTarget,
+          .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+          .StateBefore = D3D12_RESOURCE_STATE_PRESENT,
+          .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET,
+      }};
+
+  commandList->ResourceBarrier(1, &barrierToRT);
+
+  commandList->SetGraphicsRootSignature(rootSignature);
+  commandList->SetPipelineState(pipelineState);
+  D3D12_VIEWPORT viewport{
+      .TopLeftX = 0,
+      .TopLeftY = 0,
+      .Width = static_cast<float>(width),
+      .Height = static_cast<float>(height),
+      .MinDepth = 0.0f,
+      .MaxDepth = 1.0f,
+  };
+  commandList->RSSetViewports(1, &viewport);
+  D3D12_RECT scissorRect{
+      .left = 0,
+      .top = 0,
+      .right = width,
+      .bottom = height,
+  };
+  commandList->RSSetScissorRects(1, &scissorRect);
+
+  auto rtvHandle = GetSwapchainBufferDescriptor();
+  commandList->OMSetRenderTargets(1, &rtvHandle.hCPU, FALSE, nullptr);
+
+  const float clearColor[] = {0.f, 0.f, 0.f, 1.0f};
+  commandList->ClearRenderTargetView(rtvHandle.hCPU, clearColor, 0, nullptr);
+  commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+  commandList->DrawInstanced(3, 1, 0, 0);
+
+  ID3D12DescriptorHeap *heaps[] = {
+      GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV),
+  };
+  commandList->SetDescriptorHeaps(_countof(heaps), heaps);
+
+  // ImGui::Render();
+  // ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList.Get());
+
+  D3D12_RESOURCE_BARRIER barrierToPresent{
+      .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+      .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+      .Transition = {
+          .pResource = renderTarget,
+          .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+          .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET,
+          .StateAfter = D3D12_RESOURCE_STATE_PRESENT,
+      }};
+  commandList->ResourceBarrier(1, &barrierToPresent);
+
+  commandList->Close();
+
+  Submit(commandList);
+  Present(1);
+}
 void D3d12uRenderer::EndFrame() {}
 void D3d12uRenderer::AddGuiUpdateCallBack(std::function<void()> callBack) {}
+
+ID3D12Resource1 *
+D3d12uRenderer::CreateBuffer(D3D12_RESOURCE_DESC desc,
+                             D3D12_HEAP_PROPERTIES heapProperties) {
+  ID3D12Resource1 *buffer;
+  this->device->CreateCommittedResource(
+      &heapProperties, D3D12_HEAP_FLAG_NONE, &desc,
+      D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer));
+  return buffer;
+}
+
+ID3D12RootSignature *D3d12uRenderer::CreateRootSignature(ID3DBlob *signature) {
+  ID3D12RootSignature *rootSignature;
+  HRESULT hr = device->CreateRootSignature(0, signature->GetBufferPointer(),
+                                           signature->GetBufferSize(),
+                                           IID_PPV_ARGS(&rootSignature));
+  if (FAILED(hr)) {
+    signature->Release();
+    std::cerr << "Failed to create root signature" << std::endl;
+    return nullptr;
+  }
+  return rootSignature;
+}
+
+ID3D12PipelineState *D3d12uRenderer::CreateGraphicsPipelineState(
+    const D3D12_GRAPHICS_PIPELINE_STATE_DESC &desc) {
+  ID3D12PipelineState *pso;
+  HRESULT hr = device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso));
+  return pso;
+}
+
+ID3D12GraphicsCommandList *D3d12uRenderer::CreateCommandList() {
+  ID3D12GraphicsCommandList *commandList;
+
+  HRESULT hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                         frameInfo[frameIndex].commandAllocator,
+                                         nullptr, IID_PPV_ARGS(&commandList));
+  if (FAILED(hr)) {
+    std::cerr << "Failed to create command list" << std::endl;
+    return nullptr;
+  }
+  return commandList;
+}
+
+D3d12uRenderer::DescriptorHandle
+D3d12uRenderer::GetSwapchainBufferDescriptor() {
+  return frameInfo[frameIndex].rtvDescriptor;
+}
+
+ID3D12Resource1 *D3d12uRenderer::GetSwapchainBufferResource() {
+  return frameInfo[frameIndex].targetBuffer;
+}
+
+void D3d12uRenderer::Submit(ID3D12CommandList *const commandList) {
+  commandQueue->ExecuteCommandLists(1, &commandList);
+}
+
+void D3d12uRenderer::Present(UINT syncInterval, UINT flags) {
+  if (this->swapChain) {
+    swapChain->Present(syncInterval, flags);
+    const UINT64 currentFenceValue = frameInfo[frameIndex].fenceValue;
+    commandQueue->Signal(frameFence, currentFenceValue);
+
+    frameIndex = swapChain->GetCurrentBackBufferIndex();
+
+    const UINT64 expectValue = frameInfo[frameIndex].fenceValue;
+    if (frameFence->GetCompletedValue() < expectValue) {
+      frameFence->SetEventOnCompletion(expectValue, waitFence);
+      WaitForSingleObjectEx(waitFence, INFINITE, FALSE);
+    }
+    frameInfo[frameIndex].fenceValue = currentFenceValue + 1;
+  }
+}
 
 void D3d12uRenderer::PrepareDevice() {
 #ifdef _DEBUG
@@ -221,16 +368,159 @@ void D3d12uRenderer::PrepareSwapChain() {
   QUERY_INTERFACE(pSwapChain1, swapChain);
   dxgiFactory->MakeWindowAssociation(hWindow, DXGI_MWA_NO_ALT_ENTER);
 }
-void D3d12uRenderer::PrepareRenderTarget() {
+void D3d12uRenderer::PrepareRenderTargetView() {
   for (UINT i = 0; i < frameCount; i++) {
-    ID3D12Resource1* rt;
+    ID3D12Resource1 *rt;
     swapChain->GetBuffer(i, IID_PPV_ARGS(&rt));
 
     auto descriptor = AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    device->CreateRenderTargetView(rt,nullptr,descriptor.hCPU);
+    device->CreateRenderTargetView(rt, nullptr, descriptor.hCPU);
     frameInfo[i].rtvDescriptor = descriptor;
     frameInfo[i].targetBuffer = rt;
   }
+}
+
+void D3d12uRenderer::PrepareTriangle() {
+  float triangleVertices[] = {0.5f,  -0.5f,  0.5f, 0, 0, 1,
+                              0.0f,  0.5f, 0.5f, 0, 1, 0,
+                              -0.5f, -0.5f,  0.5f, 1, 0, 0};
+  D3D12_HEAP_PROPERTIES uploadHeap{
+      .Type = D3D12_HEAP_TYPE_UPLOAD,
+      .CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+      .MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+      .CreationNodeMask = 0,
+      .VisibleNodeMask = 0,
+  };
+  D3D12_RESOURCE_DESC resDesc{.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+                              .Alignment = 0,
+                              .Width =
+                                  sizeof(float) * _countof(triangleVertices),
+                              .Height = 1,
+                              .DepthOrArraySize = 1,
+                              .MipLevels = 1,
+                              .Format = DXGI_FORMAT_UNKNOWN,
+                              .SampleDesc = {.Count = 1, .Quality = 0},
+                              .Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+                              .Flags = D3D12_RESOURCE_FLAG_NONE};
+  vertexBuffer = CreateBuffer(resDesc, uploadHeap);
+
+  void *mapped = nullptr;
+  vertexBuffer->Map(0, nullptr, &mapped);
+  if (mapped) {
+    memcpy(mapped, triangleVertices,
+           sizeof(float) * _countof(triangleVertices));
+    vertexBuffer->Unmap(0, nullptr);
+  }
+  vertexBufferView = D3D12_VERTEX_BUFFER_VIEW{
+      .BufferLocation = vertexBuffer->GetGPUVirtualAddress(),
+      .SizeInBytes = sizeof(float) * _countof(triangleVertices),
+      .StrideInBytes = sizeof(float) * 6};
+
+  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc{
+      .NumParameters = 0,
+      .pParameters = nullptr,
+      .NumStaticSamplers = 0,
+      .pStaticSamplers = nullptr,
+      .Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT};
+
+  ID3DBlob *signatureBlob = nullptr;
+  ID3DBlob *errorBlob = nullptr;
+  D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+                              &signatureBlob, &errorBlob);
+  rootSignature = CreateRootSignature(signatureBlob);
+  D3D12_INPUT_ELEMENT_DESC inputElementDesc[] = {
+      {
+          .SemanticName = "POSITION",
+          .SemanticIndex = 0,
+          .Format = DXGI_FORMAT_R32G32B32_FLOAT,
+          .InputSlot = 0,
+          .AlignedByteOffset = 0,
+          .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+          .InstanceDataStepRate = 0,
+      },
+      {
+          .SemanticName = "COLOR",
+          .SemanticIndex = 0,
+          .Format = DXGI_FORMAT_R32G32B32_FLOAT,
+          .InputSlot = 0,
+          .AlignedByteOffset = sizeof(float) * 3,
+          .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+          .InstanceDataStepRate = 0,
+      },
+  };
+  D3D12_INPUT_LAYOUT_DESC inputLayout{
+      .pInputElementDescs = inputElementDesc,
+      .NumElements = _countof(inputElementDesc),
+  };
+  std::vector<char> vsdata, psdata;
+  GetFileLoader()->Load("res/shader.vert.cso", vsdata);
+  GetFileLoader()->Load("res/shader.frag.cso", psdata);
+  D3D12_SHADER_BYTECODE vs{
+      .pShaderBytecode = vsdata.data(),
+      .BytecodeLength = vsdata.size(),
+  };
+  D3D12_SHADER_BYTECODE ps{
+      .pShaderBytecode = psdata.data(),
+      .BytecodeLength = psdata.size(),
+  };
+  D3D12_BLEND_DESC blendState{
+      .AlphaToCoverageEnable = FALSE,
+      .IndependentBlendEnable = FALSE,
+      .RenderTarget = {
+          D3D12_RENDER_TARGET_BLEND_DESC{.BlendEnable = FALSE,
+                                         .LogicOpEnable = FALSE,
+                                         .SrcBlend = D3D12_BLEND_ONE,
+                                         .DestBlend = D3D12_BLEND_ZERO,
+                                         .BlendOp = D3D12_BLEND_OP_ADD,
+                                         .SrcBlendAlpha = D3D12_BLEND_ONE,
+                                         .DestBlendAlpha = D3D12_BLEND_ZERO,
+                                         .BlendOpAlpha = D3D12_BLEND_OP_ADD,
+                                         .LogicOp = D3D12_LOGIC_OP_NOOP,
+                                         .RenderTargetWriteMask =
+                                             D3D12_COLOR_WRITE_ENABLE_ALL},
+      }};
+
+  D3D12_RASTERIZER_DESC rasterizerState{
+      .FillMode = D3D12_FILL_MODE_SOLID,
+      .CullMode = D3D12_CULL_MODE_BACK,
+      .FrontCounterClockwise = TRUE,
+      .DepthBias = D3D12_DEFAULT_DEPTH_BIAS,
+      .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
+      .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+      .DepthClipEnable = TRUE,
+      .MultisampleEnable = FALSE,
+      .AntialiasedLineEnable = FALSE,
+      .ForcedSampleCount = 0,
+      .ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF};
+  const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = {
+      .StencilFailOp = D3D12_STENCIL_OP_KEEP,
+      .StencilDepthFailOp = D3D12_STENCIL_OP_KEEP,
+      .StencilPassOp = D3D12_STENCIL_OP_KEEP,
+      .StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS};
+  D3D12_DEPTH_STENCIL_DESC depthStencilState{
+      .DepthEnable = FALSE,
+      .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL,
+      .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+      .StencilEnable = FALSE,
+      .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK,
+      .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+      .FrontFace = defaultStencilOp,
+      .BackFace = defaultStencilOp};
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.InputLayout = inputLayout;
+  psoDesc.pRootSignature = rootSignature;
+  psoDesc.VS = vs;
+  psoDesc.PS = ps;
+  psoDesc.RasterizerState = rasterizerState;
+  psoDesc.BlendState = blendState;
+  psoDesc.DepthStencilState = depthStencilState;
+  psoDesc.SampleMask = UINT_MAX;
+  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  psoDesc.NumRenderTargets = 1;
+  psoDesc.RTVFormats[0] = GetSwapchainFormat();
+  psoDesc.SampleDesc.Count = 1;
+  pipelineState = CreateGraphicsPipelineState(psoDesc);
 }
 
 // namespace paranoixa
