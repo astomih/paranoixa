@@ -61,12 +61,17 @@ void D3d12uRenderer::Initialize(void *window) {
   ImGui::StyleColorsDark();
   // Setup Platform/Renderer bindings
   ImGui_ImplSDL3_InitForD3D(sdlWindow);
-  // ImGui_ImplDX12_Init(hwnd, 3, D3D_FEATURE_LEVEL_12_0);
+  auto fontDescriptor = AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  ImGui_ImplDX12_Init(device,2,GetSwapchainFormat(),GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+  ,fontDescriptor.hCPU,fontDescriptor.hGPU
+  );
   frameIndex = this->swapChain->GetCurrentBackBufferIndex();
 
   PrepareTriangle();
 }
-void D3d12uRenderer::ProcessEvent(void *event) {}
+void D3d12uRenderer::ProcessEvent(void *event) {
+  ImGui_ImplSDL3_ProcessEvent(static_cast<SDL_Event *>(event));
+}
 void D3d12uRenderer::BeginFrame() {
   frameInfo[frameIndex].commandAllocator->Reset();
 
@@ -118,8 +123,14 @@ void D3d12uRenderer::BeginFrame() {
   };
   commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-  // ImGui::Render();
-  // ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList.Get());
+  ImGui_ImplSDL3_NewFrame();
+  ImGui_ImplDX12_NewFrame();
+  ImGui::NewFrame();
+  for (auto &callBack : this->guiCallBacks) {
+    callBack();
+  }
+  ImGui::Render();
+   ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 
   D3D12_RESOURCE_BARRIER barrierToPresent{
       .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -138,7 +149,9 @@ void D3d12uRenderer::BeginFrame() {
   Present(1);
 }
 void D3d12uRenderer::EndFrame() {}
-void D3d12uRenderer::AddGuiUpdateCallBack(std::function<void()> callBack) {}
+void D3d12uRenderer::AddGuiUpdateCallBack(std::function<void()> callBack) {
+  this->guiCallBacks.push_back(callBack);
+}
 
 ID3D12Resource1 *
 D3d12uRenderer::CreateBuffer(D3D12_RESOURCE_DESC desc,

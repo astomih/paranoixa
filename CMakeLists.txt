@@ -103,6 +103,7 @@ if(WIN32)
     library/imnodes/*.cpp
     library/imgui/backends/imgui_impl_sdl3.cpp
     library/imgui/backends/imgui_impl_vulkan.cpp
+    library/imgui/backends/imgui_impl_dx12.cpp
     library/imgui/backends/imgui_impl_wgpu.cpp
     source/paranoixa/*/*/*.cpp
   )

@@ -95,6 +95,7 @@ private:
   ID3D12RootSignature* rootSignature;
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
   ID3D12PipelineState* pipelineState;
+  std::vector<std::function<void()>> guiCallBacks;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_D3D12U_RENDERER_HPP
