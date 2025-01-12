@@ -87,7 +87,7 @@ private:
   DescriptorHeapInfo rtvDescriptorHeap;
   DescriptorHeapInfo dsvDescriptorHeap;
   DescriptorHeapInfo srvDescriptorHeap;
-  DescriptorHeapInfo srvDescriptorHeapForImGUI;
+  DescriptorHeapInfo imguiDescriptorHeap;
   DescriptorHeapInfo samplerDescriptorHeap;
   ID3D12CommandAllocator *commandAllocator;
   void *waitFence;

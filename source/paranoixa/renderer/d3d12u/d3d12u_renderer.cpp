@@ -28,6 +28,7 @@ D3d12uRenderer::D3d12uRenderer(AllocatorPtr allocator)
 D3d12uRenderer::~D3d12uRenderer() {
   samplerDescriptorHeap.heap->Release();
   srvDescriptorHeap.heap->Release();
+  imguiDescriptorHeap.heap->Release();
   dsvDescriptorHeap.heap->Release();
   rtvDescriptorHeap.heap->Release();
 
@@ -66,7 +67,7 @@ void D3d12uRenderer::Initialize(void *window) {
   {
 
     DescriptorHandle fontDescriptor = {};
-    auto info = &this->srvDescriptorHeapForImGUI;
+    auto info = &this->imguiDescriptorHeap;
     auto desc = info->heap->GetDesc();
     fontDescriptor.type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     fontDescriptor.hCPU = info->heap->GetCPUDescriptorHandleForHeapStart();
@@ -78,7 +79,7 @@ void D3d12uRenderer::Initialize(void *window) {
     }
     info->usedIndex++;
     ImGui_ImplDX12_Init(device, 2, GetSwapchainFormat(),
-                        srvDescriptorHeapForImGUI.heap, fontDescriptor.hCPU,
+                        imguiDescriptorHeap.heap, fontDescriptor.hCPU,
                         fontDescriptor.hGPU);
   }
 
@@ -143,6 +144,8 @@ void D3d12uRenderer::BeginFrame() {
   commandList->SetGraphicsRootDescriptorTable(0, textureDescriptor.hGPU);
   commandList->SetGraphicsRootDescriptorTable(1, samplerDescriptor.hGPU);
   commandList->DrawInstanced(3, 1, 0, 0);
+  heaps[0] = this->imguiDescriptorHeap.heap;
+  commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 
   ImGui_ImplSDL3_NewFrame();
   ImGui_ImplDX12_NewFrame();
@@ -452,10 +455,12 @@ void D3d12uRenderer::PrepareDescriptorHeap() {
       .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE};
   this->device->CreateDescriptorHeap(&srvHeapDesc,
                                      IID_PPV_ARGS(&srvDescriptorHeap.heap));
+  this->device->CreateDescriptorHeap(&srvHeapDesc,
+                                     IID_PPV_ARGS(&imguiDescriptorHeap.heap));
   this->srvDescriptorHeap.handleSize = device->CreateDescriptorHeap(
       &srvHeapDesc, IID_PPV_ARGS(&srvDescriptorHeap.heap));
-  this->srvDescriptorHeapForImGUI.handleSize = device->CreateDescriptorHeap(
-      &srvHeapDesc, IID_PPV_ARGS(&srvDescriptorHeapForImGUI.heap));
+  this->imguiDescriptorHeap.handleSize = device->CreateDescriptorHeap(
+      &srvHeapDesc, IID_PPV_ARGS(&imguiDescriptorHeap.heap));
 
   D3D12_DESCRIPTOR_HEAP_DESC samplerHeapDesc{
       .Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
