@@ -57,7 +57,7 @@ Paranoixa::Paranoixa(const Desc &desc)
   switch (desc.api) {
   case GraphicsAPI::D3D12U:
     renderer = MakeUnique<D3d12uRenderer>(allocator, allocator);
-    windowName = "Paranoixa ( Native D3D12 Ultimate )";
+    windowName = "Paranoixa ( Native Direct3D12 )";
     break;
   case GraphicsAPI::WebGPU: {
     renderer = MakeUnique<WebGPURenderer>(allocator, allocator);

@@ -29,9 +29,13 @@ public:
   };
   
   ID3D12Resource1* CreateBuffer(D3D12_RESOURCE_DESC desc, D3D12_HEAP_PROPERTIES heapProperties);
+  ID3D12Resource1* CreateTexture(const void *data, size_t size, int width, int height);
+  DescriptorHandle CreateSampler(const D3D12_SAMPLER_DESC &desc);
   ID3D12RootSignature* CreateRootSignature(ID3DBlob* signature);
   ID3D12PipelineState* CreateGraphicsPipelineState(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc);
   ID3D12GraphicsCommandList* CreateCommandList();
+  DescriptorHandle CreateShaderResourceView(
+ID3D12Resource1* res, D3D12_SHADER_RESOURCE_VIEW_DESC& srvDesc);
   DXGI_FORMAT GetSwapchainFormat() const { return DXGI_FORMAT_R8G8B8A8_UNORM; }
 
   UINT GetFrameIndex() const { return frameIndex; }
@@ -66,6 +70,7 @@ private:
 
 
   void PrepareTriangle();
+  void PrepareTexture();
 
   UINT frameCount = 2;
   AllocatorPtr allocator;
@@ -82,6 +87,7 @@ private:
   DescriptorHeapInfo rtvDescriptorHeap;
   DescriptorHeapInfo dsvDescriptorHeap;
   DescriptorHeapInfo srvDescriptorHeap;
+  DescriptorHeapInfo srvDescriptorHeapForImGUI;
   DescriptorHeapInfo samplerDescriptorHeap;
   ID3D12CommandAllocator *commandAllocator;
   void *waitFence;
@@ -92,9 +98,12 @@ private:
   UINT frameIndex;
 
   ID3D12Resource1* vertexBuffer;
+  ID3D12Resource1* texture;
   ID3D12RootSignature* rootSignature;
   D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
   ID3D12PipelineState* pipelineState;
+  DescriptorHandle textureDescriptor;
+  DescriptorHandle samplerDescriptor; 
   std::vector<std::function<void()>> guiCallBacks;
 };
 } // namespace paranoixa
