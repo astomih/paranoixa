@@ -1,3 +1,4 @@
+#ifndef EMSCRIPTEN
 #ifndef PARANOIXA_VULKAN_RENDERER_HPP
 #define PARANOIXA_VULKAN_RENDERER_HPP
 // Emscripten doesn't support Vulkan
@@ -121,3 +122,4 @@ private:
 } // namespace paranoixa
 #endif // __EMSCRIPTEN__
 #endif // PARANOIXA_VULKAN_RENDERER_HPP
+#endif

@@ -85,7 +85,6 @@ if(EMSCRIPTEN)
   file(GLOB
     SOURCE_FILES
     ${SOURCE_FILES}
-    source/paranoixa/renderer/webgpu/*.cpp
     library/imgui/*.cpp
     library/imnodes/*.cpp
     library/imgui/backends/imgui_impl_sdl3.cpp

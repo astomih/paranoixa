@@ -1,4 +1,5 @@
-﻿#include "d3d12u_renderer.hpp"
+﻿#ifndef EMSCRIPTEN
+#include "d3d12u_renderer.hpp"
 
 #ifdef _WIN32
 #include <d3d12.h>
@@ -807,3 +808,4 @@ void D3d12uRenderer::PrepareTexture() {
 // namespace paranoixa
 } // namespace paranoixa
 #endif // _WIN32
+#endif // EMSCRIPTEN

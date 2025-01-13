@@ -1,3 +1,4 @@
+#ifndef EMSCRIPTEN
 #include "imgui.h"
 
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
@@ -1275,3 +1276,4 @@ void VulkanRenderer::TransitionLayoutImage(
   }
 }
 } // namespace paranoixa
+#endif
