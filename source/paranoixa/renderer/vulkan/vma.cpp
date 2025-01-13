@@ -1,3 +1,4 @@
+#ifndef EMSCRIPTEN
 #ifdef DEBUG
 #define VMA_RECORDING_ENABLED 1
 #define VMA_DEBUG_INITIALIZE_ALLOCATIONS 1
@@ -9,3 +10,4 @@
 #include <cstdio>
 
 #include "vk_mem_alloc.h"
+#endif // EMSCRIPTEN

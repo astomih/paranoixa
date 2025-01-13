@@ -1,3 +1,4 @@
+#ifndef EMSCRIPTEN
 #ifndef PARANOIXA_VMA_HPP
 #define PARANOIXA_VMA_HPP
 #include <paranoixa.hpp>
@@ -10,3 +11,4 @@
 #define VMA_VULKAN_VERSION 1001000
 #include <vk_mem_alloc.h>
 #endif // PARANOIXA_VMA_HPP
+#endif // EMSCRIPTEN
