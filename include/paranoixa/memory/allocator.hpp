@@ -3,8 +3,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <type_traits>
 #include <memory>
+#include <type_traits>
+
 namespace paranoixa {
 
 class Allocator {
@@ -14,14 +15,14 @@ public:
   virtual void Free(void *ptr, const std::size_t &size) = 0;
 };
 
-template <typename T,
-          typename = std::enable_if_t<std::is_base_of_v<Allocator, T>>,
-          class... Args>
-std::shared_ptr<T> MakeAllocatorPtr(Args &&...args) {
-  return std::make_shared<T>(std::forward<Args>(args)...);
-}
 using AllocatorPtr = std::shared_ptr<Allocator>;
 
+template <typename T,
+          typename = std::enable_if_t<std::is_base_of_v<Allocator, T>, void>,
+          class... Args>
+AllocatorPtr MakeAllocatorPtr(Args &&...args) {
+  return std::make_shared<T>(std::forward<Args>(args)...);
+}
 template <typename T> class StdAllocator : public std::allocator<T> {
 public:
   using value_type = T;

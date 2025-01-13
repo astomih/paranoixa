@@ -3,6 +3,7 @@
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
+#include "renderer/d3d12u/d3d12u_renderer.hpp"
 #include "renderer/renderer.hpp"
 #include "renderer/vulkan/vulkan_renderer.hpp"
 #include "renderer/webgpu/webgpu_renderer.hpp"
@@ -35,38 +36,32 @@ bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
   void *data = SDL_LoadFile_IO(file, &size, true);
 
   if (data) {
-#ifdef __EMSCRIPTEN__
-    fileData.resize(size + 1);
-    memcpy(fileData.data(), data, size);
-    fileData[size] = '\0';
-#else 
     fileData.resize(size);
     memcpy(fileData.data(), data, size);
-#endif
-    for (int i = 0; i < size; i++) {
-      std::cout << fileData[i];
-    }
     return true;
   }
-
   return false;
 }
-static ::SDL_Window *window = nullptr;
+static SDL_Window *window = nullptr;
 static bool running = true;
 Paranoixa::~Paranoixa() {
   renderer.Reset();
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
-Paranoixa::Paranoixa(const Paranoixa::Desc &desc)
+Paranoixa::Paranoixa(const Desc &desc)
     : allocator(desc.allocator), renderer(desc.allocator) {
   std::string windowName;
-  uint32_t windowFlags = 0;
+  uint32_t windowFlags = SDL_WINDOW_RESIZABLE;
 #ifndef __EMSCRIPTEN__
   switch (desc.api) {
+  case GraphicsAPI::D3D12U:
+    renderer = MakeUnique<D3d12uRenderer>(allocator, allocator);
+    windowName = "Paranoixa ( Native Direct3D12 )";
+    break;
   case GraphicsAPI::WebGPU: {
-    renderer = MakeUnique<WebGPURenderer>(allocator);
-    windowName = "Paranoixa ( Native WGPU )";
+    renderer = MakeUnique<WebGPURenderer>(allocator, allocator);
+    windowName = "Paranoixa ( Native WebGPU )";
     break;
   }
   case GraphicsAPI::Vulkan:
@@ -80,7 +75,7 @@ Paranoixa::Paranoixa(const Paranoixa::Desc &desc)
   windowName = "Paranoixa ( WASM )";
 #endif
 
-  if (SDL_Init(SDL_INIT_EVENTS) != 0) {
+  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
                  SDL_GetError());
   }
@@ -114,6 +109,7 @@ void Paranoixa::Loop() {
       running = false;
     }
   }
-  renderer->Render();
+  renderer->BeginFrame();
+  renderer->EndFrame();
 }
 } // namespace paranoixa

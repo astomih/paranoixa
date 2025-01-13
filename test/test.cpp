@@ -1,9 +1,17 @@
-#include <paranoixa/allocator/tlsf_allocator.hpp>
+#include "../library/imgui/imgui.h"
+#include "paranoixa/renderer/renderer.hpp"
+
+#include <paranoixa/memory/tlsf_allocator.hpp>
 #include <paranoixa/paranoixa.hpp>
 
-#include <memory>
+#include <SDL3/SDL.h>
+
+#include <imgui.h>
+#include <imnodes.h>
+
 void MemoryAllocatorTest();
 void PtrTest();
+
 int main() {
 
   using namespace paranoixa;
@@ -14,7 +22,18 @@ int main() {
   std::vector<int, StdAllocator<int>> vec({allocator});
   vec.push_back(1);
   {
-    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::WebGPU});
+
+    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::D3D12U});
+    app.GetRenderer()->AddGuiUpdateCallBack([]() {
+      struct Node {
+        int id;
+        float value;
+        Node(const int i, const float v) : id(i), value(v) {}
+      };
+
+      ImGui::Begin("Test");
+      ImGui::End();
+    });
     app.Run();
   }
   return 0;
@@ -22,7 +41,7 @@ int main() {
 
 void MemoryAllocatorTest() {
   using namespace paranoixa;
-  std::cout << "---------------MemoryAllocatorTest------------" << std::endl;
+  std::print("Memory Allocator Test");
   Allocator *allocator = new TLSFAllocator(0x2000);
   void *ptr = allocator->Allocate(128);
   allocator->Free(ptr, 128);
@@ -34,7 +53,7 @@ void PtrTest() {
   struct A {
     int a;
   };
-  struct B : public A {
+  struct B : A {
     B(int a) : A{a}, b(0) {}
     int b;
   };

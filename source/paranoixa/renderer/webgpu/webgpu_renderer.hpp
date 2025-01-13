@@ -8,11 +8,14 @@
 namespace paranoixa {
 class WebGPURenderer : public Renderer {
 public:
-  WebGPURenderer();
-  ~WebGPURenderer();
+  WebGPURenderer(AllocatorPtr pAllocator);
+  ~WebGPURenderer() override;
   void Initialize(void *window) override;
   void ProcessEvent(void *event) override;
-  void Render() override;
+  void BeginFrame() override;
+  void EndFrame() override;
+
+  void AddGuiUpdateCallBack(std::function<void()> callBack) override;
   class Texture {
   public:
     Texture() = default;
@@ -22,19 +25,20 @@ public:
   };
 
 private:
-  void CreateSurface(void *window);
-  void CreateInstance();
-  void CreateAdapter();
-  void CreateDevice();
-  void CreateQueue();
+  void PrepareSurface(void *window);
+  void PrepareInstance();
+  void PrepareAdapter();
+  void PrepareDevice();
+  void PrepareQueue();
 
   void ConfigSurface(uint32_t width, uint32_t height);
   Texture CreateTexture(const void *data, size_t size, int width, int height);
   WGPUBuffer CreateBuffer(uint64_t size, WGPUBufferUsage usage);
-  void CreateSampler();
+  void PrepareSampler();
   void InitializePipeline();
 
   WGPUTextureView GetNextSurfaceTextureView();
+  WGPUStringView GetStringView(const char *str);
 
   // WebGPU instance
   WGPUInstance instance;
@@ -55,6 +59,7 @@ private:
   WGPUSampler sampler;
   WGPURenderPipeline pipeline;
   WGPUBuffer vertexBuffer;
+  WGPUCommandEncoder encoder;
 };
 } // namespace paranoixa
 #endif // PARANOIXA_WEBGPU_RENDERER_HPP

@@ -1,7 +1,13 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
-project(test)
-include_directories(${CMAKE_SOURCE_DIR}/include)
+project(paranoixa_test)
+set(CMAKE_CXX_STANDARD 23)
+include_directories(
+${CMAKE_SOURCE_DIR}/include
+${CMAKE_SOURCE_DIR}/library/SDL/include
+${CMAKE_SOURCE_DIR}/library/imgui
+${CMAKE_SOURCE_DIR}/library/imnodes
+)
 
 if(NOT MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
@@ -15,10 +21,9 @@ if(EMSCRIPTEN)
 		-s WASM=1 \
 		-s USE_WEBGPU \
 		-s ASYNCIFY=1 \
-		--preload-file res \
-		-std=c++20")
-	add_executable(test test.cpp)
-	target_link_libraries(test PRIVATE paranoixa)
+		--preload-file res")
+	add_executable(paranoixa_test test.cpp)
+	target_link_libraries(paranoixa_test PRIVATE paranoixa)
 	set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
 
@@ -26,6 +31,6 @@ if(WIN32)
 	link_directories(
 		..
 	)
-	add_executable(test test.cpp)
-	target_link_libraries(test PRIVATE paranoixa)
+	add_executable(paranoixa_test test.cpp)
+	target_link_libraries(paranoixa_test PRIVATE paranoixa)
 endif()
