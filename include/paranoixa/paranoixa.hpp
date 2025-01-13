@@ -23,6 +23,7 @@ enum class GraphicsAPI {
   D3D12U,
 #endif
   WebGPU,
+  SDLGPU,
 };
 
 class Paranoixa {
