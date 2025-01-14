@@ -16,9 +16,11 @@ fn main_1() {
     let _e5 = inUV_1;
     let _e8 = inUV_1;
     f = vec2<f32>(_e5.x, (1f - _e8.y));
-    let _e14 = f;
-    let _e15 = textureSample(tex, samp, _e14);
-    outColor = _e15;
+    let _e13 = inUV_1;
+    f = _e13;
+    let _e15 = f;
+    let _e16 = textureSample(tex, samp, _e15);
+    outColor = _e16;
     return;
 }
 

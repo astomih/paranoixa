@@ -1,7 +1,5 @@
 #include "sdlgpu_renderer.hpp"
 
-#include "../../../../library/dawn/third_party/spirv-headers/src/include/spirv/unified1/spirv.h"
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
 
@@ -47,10 +45,14 @@ void SDLGPURenderer::Initialize(void *window) {
   textureCreateInfo.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
   textureCreateInfo.width = surface->w;
   textureCreateInfo.height = surface->h;
-  textureCreateInfo.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
+  textureCreateInfo.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
   textureCreateInfo.num_levels = 1;
   textureCreateInfo.layer_count_or_depth = 1;
   SDL_GPUTexture *texture = SDL_CreateGPUTexture(device, &textureCreateInfo);
+  if (!texture) {
+    std::cout << "Failed to create texture" << std::endl;
+    return;
+  }
   SDL_GPUTransferBufferCreateInfo stagingTextureBufferCI{
       .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = (Uint32)data.size()};
   SDL_GPUTransferBuffer *stagingTextureBuffer =
@@ -79,6 +81,8 @@ void SDLGPURenderer::Initialize(void *window) {
   fsci.code = reinterpret_cast<const Uint8 *>(fragCode.data());
   fsci.format = SDL_GPU_SHADERFORMAT_SPIRV;
   fsci.entrypoint = "main";
+  fsci.num_samplers = 1;
+  fsci.num_uniform_buffers = 2;
   auto *fs = SDL_CreateGPUShader(device, &fsci);
 
   /*
@@ -124,6 +128,7 @@ void SDLGPURenderer::Initialize(void *window) {
         .texture = texture,
         .w = (Uint32)surface->w,
         .h = (Uint32)surface->h,
+        .d = 1,
     };
     SDL_UploadToGPUTexture(copyPass, &info, &region, false);
   }
@@ -179,6 +184,42 @@ void SDLGPURenderer::Initialize(void *window) {
   samplerCreateInfo.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
   samplerCreateInfo.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
   auto *sampler = SDL_CreateGPUSampler(device, &samplerCreateInfo);
+
+  SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(device);
+  if (cmdbuf == NULL) {
+    SDL_Log("AcquireGPUCommandBuffer failed: %s", SDL_GetError());
+    return;
+  }
+
+  SDL_GPUTexture *swapchainTexture;
+  if (!SDL_AcquireGPUSwapchainTexture(cmdbuf, static_cast<SDL_Window *>(window),
+                                      &swapchainTexture, NULL, NULL)) {
+    SDL_Log("WaitAndAcquireGPUSwapchainTexture failed: %s", SDL_GetError());
+    return;
+  }
+
+  if (swapchainTexture != NULL) {
+    SDL_GPUColorTargetInfo colorTargetInfo = {0};
+    colorTargetInfo.texture = swapchainTexture;
+    colorTargetInfo.clear_color = {1.0f, 0.0f, 0.0f, 1.0f};
+    colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+    colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+
+    SDL_GPURenderPass *renderPass =
+        SDL_BeginGPURenderPass(cmdbuf, &colorTargetInfo, 1, NULL);
+
+    SDL_BindGPUGraphicsPipeline(renderPass, pipeline);
+    SDL_GPUBufferBinding vertexBufferBinding = {.buffer = vertexBuffer,
+                                                .offset = 0};
+    SDL_BindGPUVertexBuffers(renderPass, 0, &vertexBufferBinding, 1);
+    SDL_GPUTextureSamplerBinding textureSamplerBinding = {.texture = texture,
+                                                          .sampler = sampler};
+    SDL_BindGPUFragmentSamplers(renderPass, 0, &textureSamplerBinding, 1);
+    SDL_DrawGPUPrimitives(renderPass, 6, 1, 0, 0);
+
+    SDL_EndGPURenderPass(renderPass);
+  }
+  SDL_SubmitGPUCommandBuffer(cmdbuf);
 }
 void SDLGPURenderer::ProcessEvent(void *event) {}
 void SDLGPURenderer::BeginFrame() {}
