@@ -1,3 +1,4 @@
+#ifndef EMSCRIPTEN
 #ifndef PARANOIXA_SDLGPU_RENDERER_HPP
 #define PARANOIXA_SDLGPU_RENDERER_HPP
 #include "renderer/renderer.hpp"
@@ -17,3 +18,4 @@ public:
 };
 } // namespace paranoixa
 #endif // PARANOIXA_SDLGPU_RENDERER_HPP
+#endif // EMSCRIPTEN

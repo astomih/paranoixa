@@ -1,3 +1,4 @@
+#ifndef EMSCRIPTEN
 #include "sdlgpu_renderer.hpp"
 
 #include <SDL3/SDL.h>
@@ -226,3 +227,4 @@ void SDLGPURenderer::BeginFrame() {}
 void SDLGPURenderer::EndFrame() {}
 void SDLGPURenderer::AddGuiUpdateCallBack(std::function<void()> callBack) {}
 } // namespace paranoixa
+#endif // EMSCRIPTEN
