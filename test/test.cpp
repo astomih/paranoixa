@@ -15,6 +15,8 @@ void PtrTest();
 int main() {
 
   using namespace paranoixa;
+
+  // TODO: Add unit tests
   MemoryAllocatorTest();
   PtrTest();
   auto allocator = MakeAllocatorPtr<TLSFAllocator>(0x2000);
@@ -23,7 +25,7 @@ int main() {
   vec.push_back(1);
   {
 
-    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::D3D12U});
+    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::SDLGPU});
     app.GetRenderer()->AddGuiUpdateCallBack([]() {
       struct Node {
         int id;
