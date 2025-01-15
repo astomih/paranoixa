@@ -28,6 +28,132 @@ enum class SampleCount {
   x4,
   x8,
 };
+enum class Filter { Nearest, Linear };
+enum class MipmapMode { Nearest, Linear };
+enum class AddressMode { Repeat, MirroredRepeat, ClampToEdge };
+enum class CompareOp {
+  Invalid,
+  Never,
+  Less,
+  Equal,
+  LessOrEqual,
+  Greater,
+  NotEqual,
+  GreaterOrEqual,
+  Always
+};
+enum VertexInputRate {
+  Vertex,
+  Instance,
+};
+struct VertexBufferDescription {
+  uint32_t slot;
+  uint32_t pitch;
+  VertexInputRate inputRate;
+  uint32_t instanceStepRate;
+};
+enum VertexElementFormat {
+  Float1,
+  Float2,
+  Float3,
+  Float4,
+};
+struct VertexAttribute {
+  uint32_t location;
+  uint32_t bufferSlot;
+  VertexElementFormat format;
+  uint32_t offset;
+};
+struct VertexInputState {
+  const VertexBufferDescription *vertexBufferDescriptions;
+  uint32_t numVertexBuffers;
+  const VertexAttribute *vertexAttributes;
+  uint32_t numVertexAttributes;
+};
+enum class PrimitiveType {
+  TriangleList,
+};
+struct RasterizerState {
+  enum class FillMode {
+    Solid,
+    Wireframe,
+  };
+  enum class CullMode {
+    None,
+    Front,
+    Back,
+  };
+  enum class FrontFace {
+    Clockwise,
+    CounterClockwise,
+  };
+  FillMode fillMode;
+  CullMode cullMode;
+  FrontFace frontFace;
+};
+struct MultiSampleState {
+  SampleCount sampleCount;
+  uint32_t sampleMask;
+  bool enableMask;
+};
+struct DepthStencilState {
+  CompareOp compareOp;
+  bool enableDepthTest;
+  bool enableDepthWrite;
+  bool enableStencilTest;
+  uint32_t stencilReadMask;
+  uint32_t stencilWriteMask;
+};
+struct ColorTargetBlendState {
+  enum class BlendFactor {
+    Zero,
+    One,
+    SrcColor,
+    OneMinusSrcColor,
+    DstColor,
+    OneMinusDstColor,
+    SrcAlpha,
+    OneMinusSrcAlpha,
+    DstAlpha,
+    OneMinusDstAlpha,
+    ConstantColor,
+    OneMinusConstantColor,
+    ConstantAlpha,
+    OneMinusConstantAlpha,
+    SrcAlphaSaturate,
+    Src1Color,
+    OneMinusSrc1Color,
+    Src1Alpha,
+    OneMinusSrc1Alpha,
+  };
+  enum class BlendOp {
+    Add,
+    Subtract,
+    ReverseSubtract,
+    Min,
+    Max,
+  };
+  BlendFactor srcColorBlendFactor;
+  BlendFactor dstColorBlendFactor;
+  BlendOp colorBlendOp;
+  BlendFactor srcAlphaBlendFactor;
+  BlendFactor dstAlphaBlendFactor;
+  BlendOp alphaBlendOp;
+  uint8_t colorWriteMask;
+  bool enableBlend;
+  bool enableColorWriteMask;
+};
+struct ColorTargetDescription {
+  TextureFormat format;
+  ColorTargetBlendState blendState;
+};
+struct TargetInfo {
+  const ColorTargetDescription *colorTargetDescriptions;
+  uint32_t numColorTargets;
+  const TextureFormat *colorTargetFormats;
+  const TextureFormat *depthStencilTargetFormat;
+  bool hasDepthStencilTarget;
+};
 class Device;
 class Texture {
 public:
@@ -53,20 +179,6 @@ private:
 
 class Sampler {
 public:
-  enum class Filter { Nearest, Linear };
-  enum class MipmapMode { Nearest, Linear };
-  enum class AddressMode { Repeat, MirroredRepeat, ClampToEdge };
-  enum class CompareOp {
-    Invalid,
-    Never,
-    Less,
-    Equal,
-    LessOrEqual,
-    Greater,
-    NotEqual,
-    GreaterOrEqual,
-    Always
-  };
   struct CreateInfo {
     AllocatorPtr allocator;
     Filter minFilter;
@@ -147,55 +259,6 @@ private:
 
 class GraphicsPipeline {
 public:
-  enum VertexInputRate {
-    Vertex,
-    Instance,
-  };
-  struct VertexBufferDescription {
-    uint32_t slot;
-    uint32_t pitch;
-    VertexInputRate inputRate;
-    uint32_t instanceStepRate;
-  };
-  enum VertexElementFormat {
-    Float1,
-    Float2,
-    Float3,
-    Float4,
-  };
-  struct VertexAttribute {
-    uint32_t location;
-    uint32_t bufferSlot;
-    VertexElementFormat format;
-    uint32_t offset;
-  };
-  struct VertexInputState {
-    const VertexBufferDescription *vertexBufferDescriptions;
-    uint32_t numVertexBuffers;
-    const VertexAttribute *vertexAttributes;
-    uint32_t numVertexAttributes;
-  };
-  enum class PrimitiveType {
-    TriangleList,
-  };
-  struct RasterizerState {
-    enum class FillMode {
-      Solid,
-      Wireframe,
-    };
-    enum class CullMode {
-      None,
-      Front,
-      Back,
-    };
-    enum class FrontFace {
-      Clockwise,
-      CounterClockwise,
-    };
-    FillMode fillMode;
-    CullMode cullMode;
-    FrontFace frontFace;
-  };
   struct CreateInfo {
     AllocatorPtr allocator;
     Ptr<Shader> vertexShader;
@@ -203,6 +266,9 @@ public:
     VertexInputState vertexInputState;
     PrimitiveType primitiveType;
     RasterizerState rasterizerState;
+    MultiSampleState multiSampleState;
+    DepthStencilState depthStencilState;
+    TargetInfo targetInfo;
   };
 };
 
@@ -226,7 +292,8 @@ public:
   struct CreateInfo {
     AllocatorPtr allocator;
   };
-  Device(const CreateInfo &createInfo) : allocator(createInfo.allocator) {}
+  Device(const CreateInfo &createInfo) : createInfo(createInfo) {}
+  virtual ~Device() = default;
   void ClaimWindow(void *window);
   virtual Ptr<Buffer> CreateBuffer(const Buffer::CreateInfo &createInfo) = 0;
   virtual Ptr<Texture> CreateTexture(const Texture::CreateInfo &createInfo) = 0;
@@ -242,7 +309,7 @@ public:
   CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) = 0;
 
 private:
-  AllocatorPtr allocator;
+  CreateInfo createInfo;
 };
 
 class Renderer {
