@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "../memory/allocator.hpp"
-#include "memory/ptr.hpp"
+#include "../memory/ptr.hpp"
 
 namespace paranoixa {
 class FileLoader {
@@ -168,12 +168,10 @@ public:
     uint32_t numLevels;
     SampleCount sampleCount;
   };
-  Texture(Ptr<Device> device, const CreateInfo &createInfo)
-      : device(device), createInfo(createInfo) {}
+  Texture(const CreateInfo &createInfo) : createInfo(createInfo) {}
   virtual ~Texture() = default;
 
 private:
-  Ptr<Device> device;
   CreateInfo createInfo;
 };
 
@@ -195,12 +193,10 @@ public:
     bool enableAnisotropy;
     bool enableCompare;
   };
-  Sampler(Ptr<Device> device, const CreateInfo &createInfo)
-      : device(device), createInfo(createInfo) {}
+  Sampler(const CreateInfo &createInfo) : createInfo(createInfo) {}
   virtual ~Sampler() = default;
 
 private:
-  Ptr<Device> device;
   CreateInfo createInfo;
 };
 
@@ -211,12 +207,12 @@ public:
     BufferUsage usage;
     uint32_t size;
   };
-  Buffer(Ptr<Device> device, const CreateInfo &createInfo)
-      : device(device), createInfo(createInfo) {}
   virtual ~Buffer() = default;
 
+protected:
+  Buffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
+
 private:
-  Ptr<Device> device;
   CreateInfo createInfo;
 };
 
@@ -227,12 +223,15 @@ public:
     TransferBufferUsage usage;
     uint32_t size;
   };
-  TransferBuffer(Ptr<Device> device, const CreateInfo &createInfo)
-      : device(device), createInfo(createInfo) {}
   virtual ~TransferBuffer() = default;
 
+  virtual void *Map() = 0;
+  virtual void Unmap() = 0;
+
+protected:
+  TransferBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
+
 private:
-  Ptr<Device> device;
   CreateInfo createInfo;
 };
 
@@ -248,12 +247,12 @@ public:
     uint32_t numStorageTextures;
     uint32_t numUniformBuffers;
   };
-  Shader(Ptr<Device> device, const CreateInfo &createInfo)
-      : device(device), createInfo(createInfo) {}
   virtual ~Shader() = default;
 
+protected:
+  Shader(const CreateInfo &createInfo) : createInfo(createInfo) {}
+
 private:
-  Ptr<Device> device;
   CreateInfo createInfo;
 };
 
@@ -270,6 +269,13 @@ public:
     DepthStencilState depthStencilState;
     TargetInfo targetInfo;
   };
+  virtual ~GraphicsPipeline() = default;
+
+protected:
+  GraphicsPipeline(const CreateInfo &createInfo) : createInfo(createInfo) {}
+
+private:
+  CreateInfo createInfo;
 };
 
 class ComputePipeline {
@@ -278,6 +284,13 @@ public:
     AllocatorPtr allocator;
     Ptr<Shader> computeShader;
   };
+  virtual ~ComputePipeline() = default;
+
+protected:
+  ComputePipeline(const CreateInfo &createInfo) : createInfo(createInfo) {}
+
+private:
+  CreateInfo createInfo;
 };
 
 class CommandBuffer {
@@ -285,16 +298,36 @@ public:
   struct CreateInfo {
     AllocatorPtr allocator;
   };
+  virtual ~CommandBuffer() = default;
+
+protected:
+  CommandBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
+
+private:
+  CreateInfo createInfo;
+};
+class CopyPass {
+public:
+protected:
+  CopyPass(AllocatorPtr allocator, Device &device, CommandBuffer &commandBuffer)
+      : allocator(allocator), device(device), commandBuffer(commandBuffer) {}
+
+private:
+  AllocatorPtr allocator;
+  Device &device;
+  CommandBuffer &commandBuffer;
 };
 
 class Device {
 public:
   struct CreateInfo {
     AllocatorPtr allocator;
+    bool debugMode;
   };
   Device(const CreateInfo &createInfo) : createInfo(createInfo) {}
   virtual ~Device() = default;
-  void ClaimWindow(void *window);
+  const CreateInfo &GetCreateInfo() const { return createInfo; }
+  virtual void ClaimWindow(void *window) = 0;
   virtual Ptr<Buffer> CreateBuffer(const Buffer::CreateInfo &createInfo) = 0;
   virtual Ptr<Texture> CreateTexture(const Texture::CreateInfo &createInfo) = 0;
   virtual Ptr<Sampler> CreateSampler(const Sampler::CreateInfo &createInfo) = 0;
@@ -302,9 +335,9 @@ public:
   CreateTransferBuffer(const TransferBuffer::CreateInfo &createInfo) = 0;
   virtual Ptr<Shader> CreateShader(const Shader::CreateInfo &createInfo) = 0;
   virtual Ptr<GraphicsPipeline>
-  CreatePipeline(const GraphicsPipeline::CreateInfo &createInfo) = 0;
+  CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) = 0;
   virtual Ptr<ComputePipeline>
-  CreatePipeline(const ComputePipeline::CreateInfo &createInfo) = 0;
+  CreateComputePipeline(const ComputePipeline::CreateInfo &createInfo) = 0;
   virtual Ptr<CommandBuffer>
   CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) = 0;
 
@@ -317,7 +350,6 @@ public:
   Renderer() = default;
   virtual ~Renderer() { std::cout << "Renderer::~Renderer()" << std::endl; };
 
-  virtual Ptr<Device> CreateDevice(const Device::CreateInfo &createInfo) = 0;
   virtual void Initialize(void *window) = 0;
   virtual void ProcessEvent(void *event) = 0;
 

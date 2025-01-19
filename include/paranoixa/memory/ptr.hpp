@@ -3,27 +3,33 @@
 #include "allocator.hpp"
 #include "control_block.hpp"
 #include <cassert>
-namespace paranoixa
-{
-  
+#include <print>
+namespace paranoixa {
+
 template <typename T> class Ref;
 
-template <typename T>
-class DefaultDeleter {
+template <typename T> class DefaultDeleter {
 public:
-  void Delete(T *ptr){};
+  void Delete(T *ptr) {};
 };
+template <class T, typename... Args>
+void CallConstructor(T *ptr, Args &&...args) {
+  new (ptr) T(std::forward<Args>(args)...);
+}
+
+template <class T, typename... Args>
+T *NewWithConstructor(AllocatorPtr allocator, Args &&...args) {
+  T *ptr = reinterpret_cast<T *>(allocator->Allocate(sizeof(T)));
+  CallConstructor(ptr, std::forward<Args>(args)...);
+  return ptr;
+}
 // SharedPtr
 template <typename T, class Deleter = DefaultDeleter<T>> class Ptr {
 public:
-  Ptr(AllocatorPtr allocator, uint32_t size = 0, T *ptr = nullptr)
-      : controlBlock(new(reinterpret_cast<ControlBlock<T> *>(
-            allocator->Allocate(sizeof(ControlBlock<T>))))
-                         ControlBlock<T>({.ptr = ptr,
-                                          .size = size,
-                                          .refCount = 0,
-                                          .weakRefCount = 0,
-                                          .allocator = allocator})) {
+  Ptr(T *ptr) : controlBlock(ptr) {}
+  Ptr(AllocatorPtr allocator, T *ptr = nullptr)
+      : controlBlock(NewWithConstructor<ControlBlock<T>>(allocator, ptr, 0, 0,
+                                                         allocator)) {
     assert(allocator);
     if (controlBlock->ptr) {
       controlBlock->refCount = 1;
@@ -60,7 +66,6 @@ public:
 
   T &operator*() const { return *(controlBlock->ptr); }
 
-
   void Reset(T *newPtr = nullptr) {
     Release();
     if (newPtr) {
@@ -80,7 +85,7 @@ private:
   void Release() {
     if (controlBlock && controlBlock->ptr && --controlBlock->refCount == 0) {
       controlBlock->ptr->~T();
-      controlBlock->allocator->Free(controlBlock->ptr, controlBlock->size);
+      controlBlock->allocator->Free(controlBlock->ptr, sizeof(T));
       controlBlock->ptr = nullptr;
       if (controlBlock->weakRefCount == 0) {
         AllocatorPtr allocator = nullptr;
@@ -105,23 +110,17 @@ private:
 
 template <typename T, class... Args>
 Ptr<T> MakePtr(AllocatorPtr allocator, Args &&...args) {
-  return Ptr<T>{allocator, sizeof(T),
-                new (allocator->Allocate(sizeof(T)))
-                    T(std::forward<Args>(args)...)};
+  return Ptr<T>{allocator, new (allocator->Allocate(sizeof(T)))
+                               T(std::forward<Args>(args)...)};
 }
 
 // UniquePtr
 template <typename T> class UniquePtr {
 
 public:
-  UniquePtr(AllocatorPtr allocator, uint32_t size = 0, T *ptr = nullptr)
-      : controlBlock(new(reinterpret_cast<ControlBlock<T> *>(
-            allocator->Allocate(sizeof(ControlBlock<T>))))
-                         ControlBlock<T>({.ptr = ptr,
-                                          .size = size,
-                                          .refCount = 0,
-                                          .weakRefCount = 0,
-                                          .allocator = allocator})) {
+  UniquePtr(AllocatorPtr allocator, T *ptr = nullptr)
+      : controlBlock(NewWithConstructor<ControlBlock<T>>(allocator, ptr, 0, 0,
+                                                         allocator)) {
     assert(allocator);
     if (controlBlock->ptr) {
       controlBlock->refCount = 1;
@@ -177,7 +176,7 @@ private:
   void Release() {
     if (controlBlock && controlBlock->ptr && --controlBlock->refCount == 0) {
       controlBlock->ptr->~T();
-      controlBlock->allocator->Free(controlBlock->ptr, controlBlock->size);
+      controlBlock->allocator->Free(controlBlock->ptr, sizeof(T));
       controlBlock->ptr = nullptr;
       if (controlBlock->weakRefCount == 0) {
         AllocatorPtr allocator = nullptr;
@@ -202,11 +201,10 @@ private:
 
 template <typename T, class... Args>
 UniquePtr<T> MakeUnique(AllocatorPtr allocator, Args &&...args) {
-  return UniquePtr<T>({allocator, sizeof(T),
-                       new (allocator->Allocate(sizeof(T)))
-                           T(std::forward<Args>(args)...)});
+  return UniquePtr<T>({allocator, new (allocator->Allocate(sizeof(T)))
+                                      T(std::forward<Args>(args)...)});
 }
-  
-}
+
+} // namespace paranoixa
 
 #endif

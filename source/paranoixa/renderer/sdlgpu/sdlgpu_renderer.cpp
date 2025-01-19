@@ -1,3 +1,4 @@
+#include <corecrt_io.h>
 #ifndef EMSCRIPTEN
 #include "sdlgpu_renderer.hpp"
 
@@ -8,6 +9,107 @@ namespace paranoixa {
 
 SDLGPURenderer::SDLGPURenderer(AllocatorPtr allcator) {}
 SDLGPURenderer::~SDLGPURenderer() {}
+Ptr<Device> SDLGPUBackend::CreateDevice(const Device::CreateInfo &createInfo) {
+  SDL_GPUDevice *device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV,
+                                              createInfo.debugMode, nullptr);
+  if (!device) {
+    std::cout << "Failed to create GPU device" << std::endl;
+  }
+  return MakePtr<SDLGPUDevice>(createInfo.allocator, createInfo, device);
+}
+void SDLGPUDevice::ClaimWindow(void *window) {
+  if (!SDL_ClaimWindowForGPUDevice(device, static_cast<SDL_Window *>(window))) {
+    std::cout << "Failed to claim window for GPU device" << std::endl;
+  }
+}
+
+Ptr<TransferBuffer> SDLGPUDevice::CreateTransferBuffer(
+    const TransferBuffer::CreateInfo &createInfo) {
+  SDL_GPUTransferBufferCreateInfo stagingTextureBufferCI{};
+  stagingTextureBufferCI.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+  stagingTextureBufferCI.size = createInfo.size;
+
+  SDL_GPUTransferBuffer *stagingTextureBuffer =
+      SDL_CreateGPUTransferBuffer(device, &stagingTextureBufferCI);
+  return MakePtr<SDLGPUTransferBuffer>(createInfo.allocator, createInfo, *this,
+                                       stagingTextureBuffer);
+}
+
+Ptr<Buffer> SDLGPUDevice::CreateBuffer(const Buffer::CreateInfo &createInfo) {
+  SDL_GPUBufferCreateInfo bufferCI{};
+  bufferCI.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+  bufferCI.size = createInfo.size;
+  SDL_GPUBuffer *buffer = SDL_CreateGPUBuffer(device, &bufferCI);
+  return MakePtr<SDLGPUBuffer>(createInfo.allocator, createInfo, buffer);
+}
+
+Ptr<Texture>
+SDLGPUDevice::CreateTexture(const Texture::CreateInfo &createInfo) {
+  SDL_GPUTextureCreateInfo textureCreateInfo = {
+      .type = SDL_GPU_TEXTURETYPE_2D,
+      .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+      .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+      .width = createInfo.width,
+      .height = createInfo.height,
+      .layer_count_or_depth = createInfo.layerCountOrDepth,
+      .num_levels = createInfo.numLevels,
+      .sample_count = SDL_GPU_SAMPLECOUNT_1};
+
+  SDL_GPUTexture *texture = SDL_CreateGPUTexture(device, &textureCreateInfo);
+  return MakePtr<SDLGPUTexture>(createInfo.allocator, createInfo, *this,
+                                texture);
+}
+Ptr<Sampler>
+SDLGPUDevice::CreateSampler(const Sampler::CreateInfo &createInfo) {
+  SDL_GPUSamplerCreateInfo samplerCreateInfo = {
+      .min_filter = SDL_GPU_FILTER_LINEAR,
+      .mag_filter = SDL_GPU_FILTER_LINEAR,
+      .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
+      .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+      .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+      .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+  };
+  SDL_GPUSampler *sampler = SDL_CreateGPUSampler(device, &samplerCreateInfo);
+  return MakePtr<SDLGPUSampler>(createInfo.allocator, createInfo, sampler);
+}
+
+void *SDLGPUTransferBuffer::Map() {
+  return SDL_MapGPUTransferBuffer(device.GetNative(), this->transferBuffer,
+                                  false);
+}
+void SDLGPUTransferBuffer::Unmap() {
+  SDL_UnmapGPUTransferBuffer(device.GetNative(), this->transferBuffer);
+}
+
+Ptr<Shader> SDLGPUDevice::CreateShader(const Shader::CreateInfo &createInfo) {
+  SDL_GPUShaderCreateInfo shaderCI = {};
+  shaderCI.stage = createInfo.stage == ShaderStage::Vertex
+                       ? SDL_GPU_SHADERSTAGE_VERTEX
+                       : SDL_GPU_SHADERSTAGE_FRAGMENT;
+  shaderCI.code_size = createInfo.size;
+  shaderCI.code = reinterpret_cast<const Uint8 *>(createInfo.data);
+  shaderCI.format = SDL_GPU_SHADERFORMAT_SPIRV;
+  shaderCI.entrypoint = createInfo.entrypoint;
+  auto *shader = SDL_CreateGPUShader(device, &shaderCI);
+  return MakePtr<SDLGPUShader>(createInfo.allocator, createInfo, shader);
+}
+Ptr<CommandBuffer>
+SDLGPUDevice::CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
+  SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(device);
+  return MakePtr<SDLGPUCommandBuffer>(createInfo.allocator, createInfo,
+                                      commandBuffer);
+}
+Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
+    const GraphicsPipeline::CreateInfo &createInfo) {
+  return MakePtr<SDLGPUGraphicsPipeline>(createInfo.allocator, createInfo,
+                                         nullptr);
+}
+Ptr<ComputePipeline> SDLGPUDevice::CreateComputePipeline(
+    const ComputePipeline::CreateInfo &createInfo) {
+  return MakePtr<SDLGPUComputePipeline>(createInfo.allocator, createInfo,
+                                        nullptr);
+}
+
 void SDLGPURenderer::Initialize(void *window) {
 
   bool debugMode = true;

@@ -10,6 +10,8 @@
 #include "memory/ptr.hpp"
 #include "memory/ref.hpp"
 
+#include "renderer/renderer.hpp"
+
 #ifdef _DEBUG
 #define PARANOIXA_BUILD_DEBUG
 #elif NDEBUG
@@ -26,6 +28,12 @@ enum class GraphicsAPI {
   SDLGPU,
 };
 
+class Backend {
+public:
+  virtual ~Backend() = default;
+  virtual Ptr<Device> CreateDevice(const Device::CreateInfo &createInfo) = 0;
+};
+
 class Paranoixa {
 public:
   struct Desc {
@@ -35,6 +43,7 @@ public:
 
   Paranoixa(const Desc &desc);
   ~Paranoixa();
+  Ptr<Backend> GetBackend();
   Ref<class Renderer> GetRenderer();
 
   void Run();
