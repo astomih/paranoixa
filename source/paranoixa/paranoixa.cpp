@@ -50,6 +50,25 @@ Paranoixa::~Paranoixa() {
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
+Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
+  switch (api) {
+  case GraphicsAPI::Vulkan: {
+    // TODO
+  }
+  case GraphicsAPI::D3D12U: {
+    // TODO
+  }
+  case GraphicsAPI::WebGPU: {
+    // TODO
+  }
+  case GraphicsAPI::SDLGPU: {
+    return MakePtr<SDLGPUBackend>(allocator);
+  }
+  default:
+    return nullptr;
+  }
+  return nullptr;
+}
 Paranoixa::Paranoixa(const Desc &desc)
     : allocator(desc.allocator), renderer(desc.allocator) {
   std::string windowName;
@@ -94,6 +113,7 @@ Paranoixa::Paranoixa(const Desc &desc)
   renderer->Initialize(window);
   SDL_DestroySurface(surface);
 }
+void *Paranoixa::GetWindow() { return static_cast<void *>(window); }
 Ref<Renderer> Paranoixa::GetRenderer() { return Ref<Renderer>(renderer); }
 void Paranoixa::Run() {
 #ifndef __EMSCRIPTEN__

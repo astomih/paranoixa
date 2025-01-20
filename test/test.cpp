@@ -25,7 +25,18 @@ int main() {
   vec.push_back(1);
   {
 
+    if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
+      SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
+                   SDL_GetError());
+    }
+    SDL_Surface *surface = SDL_LoadBMP("res/texture.bmp");
+    uint32_t windowFlags = SDL_WINDOW_RESIZABLE;
+    auto *window =
+        SDL_CreateWindow("test", surface->w, surface->h, windowFlags);
     auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::SDLGPU});
+    auto backend = app.CreateBackend(GraphicsAPI::SDLGPU);
+    auto device = backend->CreateDevice({allocator, false});
+
     app.GetRenderer()->AddGuiUpdateCallBack([]() {
       struct Node {
         int id;

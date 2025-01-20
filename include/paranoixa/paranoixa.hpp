@@ -43,7 +43,8 @@ public:
 
   Paranoixa(const Desc &desc);
   ~Paranoixa();
-  Ptr<Backend> GetBackend();
+  Ptr<Backend> CreateBackend(const GraphicsAPI &api);
+  void *GetWindow();
   Ref<class Renderer> GetRenderer();
 
   void Run();
