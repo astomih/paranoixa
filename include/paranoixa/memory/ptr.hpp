@@ -26,7 +26,7 @@ T *NewWithConstructor(AllocatorPtr allocator, Args &&...args) {
 // SharedPtr
 template <typename T, class Deleter = DefaultDeleter<T>> class Ptr {
 public:
-  Ptr(T *ptr) : controlBlock(ptr) {}
+  Ptr(std::nullptr_t) : controlBlock(nullptr) {}
   Ptr(AllocatorPtr allocator, T *ptr = nullptr)
       : controlBlock(NewWithConstructor<ControlBlock<T>>(allocator, ptr, 0, 0,
                                                          allocator)) {
@@ -110,8 +110,8 @@ private:
 
 template <typename T, class... Args>
 Ptr<T> MakePtr(AllocatorPtr allocator, Args &&...args) {
-  return Ptr<T>{allocator, new (allocator->Allocate(sizeof(T)))
-                               T(std::forward<Args>(args)...)};
+  return Ptr<T>{allocator,
+                NewWithConstructor<T>(allocator, std::forward<Args>(args)...)};
 }
 
 // UniquePtr

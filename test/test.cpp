@@ -24,7 +24,6 @@ int main() {
   std::vector<int, StdAllocator<int>> vec({allocator});
   vec.push_back(1);
   {
-
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
                    SDL_GetError());
@@ -36,18 +35,113 @@ int main() {
     auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::SDLGPU});
     auto backend = app.CreateBackend(GraphicsAPI::SDLGPU);
     auto device = backend->CreateDevice({allocator, false});
+    device->ClaimWindow(window);
 
-    app.GetRenderer()->AddGuiUpdateCallBack([]() {
-      struct Node {
-        int id;
-        float value;
-        Node(const int i, const float v) : id(i), value(v) {}
-      };
+    std::vector<uint8_t> data;
+    data.resize(surface->w * surface->h * 4);
+    for (int y = 0; y < surface->h; ++y) {
+      for (int x = 0; x < surface->w; ++x) {
+        auto pixel =
+            static_cast<uint32_t *>(surface->pixels) + y * surface->w + x;
+        auto r = (*pixel & 0x00FF0000) >> 16;
+        auto g = (*pixel & 0x0000FF00) >> 8;
+        auto b = (*pixel & 0x000000FF);
+        auto a = (*pixel & 0xFF000000) >> 24;
+        auto index = (y * surface->w + x) * 4;
+        data[index + 0] = r;
+        data[index + 1] = g;
+        data[index + 2] = b;
+        data[index + 3] = a;
+      }
+    }
+    Texture::CreateInfo textureCreateInfo{};
+    textureCreateInfo.allocator = allocator;
+    textureCreateInfo.width = static_cast<uint32_t>(surface->w);
+    textureCreateInfo.height = static_cast<uint32_t>(surface->h);
+    textureCreateInfo.layerCountOrDepth = 1, textureCreateInfo.numLevels = 1;
+    textureCreateInfo.sampleCount = SampleCount::x1;
+    textureCreateInfo.format = TextureFormat::R8G8B8A8_UNORM;
+    textureCreateInfo.type = TextureType::Texture2D;
+    textureCreateInfo.usage = TextureUsage::Sampler;
+    auto texture = device->CreateTexture(textureCreateInfo);
 
-      ImGui::Begin("Test");
-      ImGui::End();
-    });
-    app.Run();
+    TransferBuffer::CreateInfo stagingTextureBufferCI = {
+        .allocator = allocator,
+        .usage = TransferBufferUsage::Upload,
+        .size = textureCreateInfo.width * textureCreateInfo.height * 4,
+    };
+    auto stagingTextureBuffer =
+        device->CreateTransferBuffer(stagingTextureBufferCI);
+    auto mapped = stagingTextureBuffer->Map();
+    memcpy(mapped, data.data(), data.size());
+    stagingTextureBuffer->Unmap();
+
+    auto &fileLoader = GetFileLoader();
+    std::vector<char> vertCode, fragCode;
+    // load in plain
+    fileLoader->Load("res/shader.vert.spv", vertCode);
+    fileLoader->Load("res/shader.frag.spv", fragCode);
+
+    Shader::CreateInfo vsci = {
+        .allocator = allocator,
+        .size = vertCode.size(),
+        .data = vertCode.data(),
+        .entrypoint = "main",
+        .stage = ShaderStage::Vertex,
+        .numSamplers = 0,
+        .numStorageTextures = 0,
+        .numUniformBuffers = 0,
+    };
+    auto vs = device->CreateShader(vsci);
+
+    Shader::CreateInfo fsci = {
+        .allocator = allocator,
+        .size = fragCode.size(),
+        .data = fragCode.data(),
+        .entrypoint = "main",
+        .stage = ShaderStage::Fragment,
+        .numSamplers = 0,
+        .numStorageTextures = 0,
+        .numUniformBuffers = 0,
+    };
+    auto fs = device->CreateShader(fsci);
+
+    /*
+   (-1, -1)  (1, -1)
+      +--------+
+      |        |
+      |        |
+      |        |
+      +--------+
+   (-1,  1)  (1,  1)
+    */
+    float triangleVerts[] = {
+        -1.f, -1.f, 0.f, 0, 1, 0, 0, 1, // position, uv, color
+        -1.f, 1.f,  0.f, 0, 0, 1, 0, 0, //
+        1.f,  -1.f, 0.f, 1, 1, 0, 0, 1, //
+        1.f,  -1.f, 0.f, 1, 1, 0, 0, 1, //
+        -1.f, 1.f,  0.f, 0, 0, 1, 0, 0, //
+        1.f,  1.f,  0.f, 1, 0, 1, 0, 0, //
+    };
+    Buffer::CreateInfo vbci = {
+        .allocator = allocator,
+        .usage = BufferUsage::Vertex,
+        .size = sizeof(triangleVerts),
+    };
+    auto vertexBuffer = device->CreateBuffer(vbci);
+    TransferBuffer::CreateInfo stagingVertexBufferCI = {
+        .allocator = allocator,
+        .usage = TransferBufferUsage::Upload,
+        .size = vbci.size,
+    };
+    auto stagingVertexBuffer =
+        device->CreateTransferBuffer(stagingVertexBufferCI);
+    mapped = stagingVertexBuffer->Map();
+    memcpy(mapped, triangleVerts, vbci.size);
+    stagingVertexBuffer->Unmap();
+
+    // transfer texture/vertex buffer to gpu
+    auto commandBuffer = device->CreateCommandBuffer({allocator});
   }
   return 0;
 }

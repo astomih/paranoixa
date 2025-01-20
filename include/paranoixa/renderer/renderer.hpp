@@ -300,6 +300,9 @@ public:
   };
   virtual ~CommandBuffer() = default;
 
+  virtual Ptr<class CopyPass> BeginCopyPass() = 0;
+  virtual void EndCopyPass() = 0;
+
 protected:
   CommandBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
 
@@ -308,6 +311,36 @@ private:
 };
 class CopyPass {
 public:
+  struct TextureTransferInfo {
+    Ptr<TransferBuffer> transferBuffer;
+    uint32_t offset;
+  };
+  struct TextureRegion {
+    Ptr<Texture> texture;
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
+  };
+  struct BufferTransferInfo {
+    Ptr<TransferBuffer> transferBuffer;
+    uint32_t offset;
+  };
+  struct BufferRegion {
+    Ptr<Buffer> buffer;
+    uint32_t offset;
+    uint32_t size;
+  };
+  virtual ~CopyPass() = default;
+
+  virtual void UploadTexture(const TextureTransferInfo &src,
+                             const TextureRegion &dst, bool cycle) = 0;
+  virtual void DownloadTexture(const TextureRegion &src,
+                               const TextureTransferInfo &dst, bool cycle) = 0;
+  virtual void UploadBuffer(const BufferTransferInfo &src,
+                            const BufferRegion &dst, bool cycle) = 0;
+  virtual void DownloadBuffer(const BufferRegion &src,
+                              const BufferTransferInfo &dst, bool cycle) = 0;
+
 protected:
   CopyPass(AllocatorPtr allocator, Device &device, CommandBuffer &commandBuffer)
       : allocator(allocator), device(device), commandBuffer(commandBuffer) {}

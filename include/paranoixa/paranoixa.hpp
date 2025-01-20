@@ -30,6 +30,7 @@ enum class GraphicsAPI {
 
 class Backend {
 public:
+  Backend() = default;
   virtual ~Backend() = default;
   virtual Ptr<Device> CreateDevice(const Device::CreateInfo &createInfo) = 0;
 };
