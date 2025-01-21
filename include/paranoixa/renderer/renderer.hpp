@@ -58,6 +58,8 @@ enum VertexElementFormat {
   Float3,
   Float4,
 };
+enum class LoadOp { Load, Clear, DontCare };
+enum class StoreOp { Store, DontCare };
 struct VertexAttribute {
   uint32_t location;
   uint32_t bufferSlot;
@@ -293,22 +295,6 @@ private:
   CreateInfo createInfo;
 };
 
-class CommandBuffer {
-public:
-  struct CreateInfo {
-    AllocatorPtr allocator;
-  };
-  virtual ~CommandBuffer() = default;
-
-  virtual Ptr<class CopyPass> BeginCopyPass() = 0;
-  virtual void EndCopyPass() = 0;
-
-protected:
-  CommandBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
-
-private:
-  CreateInfo createInfo;
-};
 class CopyPass {
 public:
   struct TextureTransferInfo {
@@ -342,13 +328,45 @@ public:
                               const BufferTransferInfo &dst, bool cycle) = 0;
 
 protected:
-  CopyPass(AllocatorPtr allocator, Device &device, CommandBuffer &commandBuffer)
+  CopyPass(AllocatorPtr allocator, Device &device,
+           class CommandBuffer &commandBuffer)
       : allocator(allocator), device(device), commandBuffer(commandBuffer) {}
 
 private:
   AllocatorPtr allocator;
   Device &device;
   CommandBuffer &commandBuffer;
+};
+class RenderPass {
+public:
+  struct ColorTargetInfo {
+    Ptr<Texture> texture;
+    // clearColor
+    LoadOp loadOp;
+    StoreOp storeOp;
+  };
+};
+
+class CommandBuffer {
+public:
+  struct CreateInfo {
+    AllocatorPtr allocator;
+  };
+  virtual ~CommandBuffer() = default;
+
+  virtual Ptr<class CopyPass> BeginCopyPass() = 0;
+  virtual void EndCopyPass(Ptr<class CopyPass> copyPass) = 0;
+
+  virtual Ptr<class RenderPass>
+  BeginRenderPass(const RenderPass::ColorTargetInfo infos[],
+                  int numColorTargets) = 0;
+  virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
+
+protected:
+  CommandBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
+
+private:
+  CreateInfo createInfo;
 };
 
 class Device {
@@ -373,6 +391,9 @@ public:
   CreateComputePipeline(const ComputePipeline::CreateInfo &createInfo) = 0;
   virtual Ptr<CommandBuffer>
   CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) = 0;
+  virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) = 0;
+  virtual Ptr<Texture>
+  AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) = 0;
 
 private:
   CreateInfo createInfo;
