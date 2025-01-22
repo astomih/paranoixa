@@ -8,6 +8,8 @@
 #include "../memory/ptr.hpp"
 
 namespace paranoixa {
+#include <vector>
+template <typename T> using Array = std::vector<T>;
 class FileLoader {
 public:
   bool Load(const char *filePath, std::vector<char> &fileData,
@@ -170,8 +172,10 @@ public:
     uint32_t numLevels;
     SampleCount sampleCount;
   };
-  Texture(const CreateInfo &createInfo) : createInfo(createInfo) {}
   virtual ~Texture() = default;
+
+protected:
+  Texture(const CreateInfo &createInfo) : createInfo(createInfo) {}
 
 private:
   CreateInfo createInfo;
@@ -226,6 +230,8 @@ public:
     uint32_t size;
   };
   virtual ~TransferBuffer() = default;
+
+  const CreateInfo &GetCreateInfo() const { return createInfo; }
 
   virtual void *Map() = 0;
   virtual void Unmap() = 0;
@@ -326,16 +332,6 @@ public:
                             const BufferRegion &dst, bool cycle) = 0;
   virtual void DownloadBuffer(const BufferRegion &src,
                               const BufferTransferInfo &dst, bool cycle) = 0;
-
-protected:
-  CopyPass(AllocatorPtr allocator, Device &device,
-           class CommandBuffer &commandBuffer)
-      : allocator(allocator), device(device), commandBuffer(commandBuffer) {}
-
-private:
-  AllocatorPtr allocator;
-  Device &device;
-  CommandBuffer &commandBuffer;
 };
 class RenderPass {
 public:
@@ -345,6 +341,28 @@ public:
     LoadOp loadOp;
     StoreOp storeOp;
   };
+  struct BufferBinding {
+    Ptr<Buffer> buffer;
+    uint32_t offset;
+  };
+  struct TextureSamplerBinding {
+    Ptr<Sampler> sampler;
+    Ptr<Texture> texture;
+  };
+  RenderPass() = default;
+  virtual ~RenderPass() = default;
+
+  virtual void BindGraphicsPipeline(Ptr<GraphicsPipeline> graphicsPipeline) = 0;
+  virtual void BindVertexBuffers(uint32_t slot,
+                                 const Array<BufferBinding> &bindings) = 0;
+  virtual void
+  BindFragmentSamplers(uint32_t slot,
+                       const Array<TextureSamplerBinding> &bindings) = 0;
+  virtual void DrawPrimitives(uint32_t numVertices, uint32_t numInstances,
+                              uint32_t firstVertex, uint32_t firstInstance) = 0;
+
+private:
+  AllocatorPtr allocator;
 };
 
 class CommandBuffer {
@@ -354,12 +372,13 @@ public:
   };
   virtual ~CommandBuffer() = default;
 
+  inline CreateInfo GetCreateInfo() const { return createInfo; }
+
   virtual Ptr<class CopyPass> BeginCopyPass() = 0;
   virtual void EndCopyPass(Ptr<class CopyPass> copyPass) = 0;
 
   virtual Ptr<class RenderPass>
-  BeginRenderPass(const RenderPass::ColorTargetInfo infos[],
-                  int numColorTargets) = 0;
+  BeginRenderPass(const Array<RenderPass::ColorTargetInfo> &infos) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
 
 protected:

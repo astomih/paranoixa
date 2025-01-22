@@ -1,4 +1,3 @@
-#include <corecrt_io.h>
 #ifndef EMSCRIPTEN
 #include "sdlgpu_renderer.hpp"
 
@@ -17,10 +16,133 @@ Ptr<Device> SDLGPUBackend::CreateDevice(const Device::CreateInfo &createInfo) {
   }
   return MakePtr<SDLGPUDevice>(createInfo.allocator, createInfo, device);
 }
+void SDLGPUCopyPass::UploadTexture(const TextureTransferInfo &src,
+                                   const TextureRegion &dst, bool cycle) {
+  SDL_GPUTextureTransferInfo transferInfo = {
+      .transfer_buffer =
+          DownCast<SDLGPUTransferBuffer>(src.transferBuffer)->GetNative(),
+      .offset = src.offset,
+  };
+  SDL_GPUTextureRegion region = {
+      .texture = DownCast<SDLGPUTexture>(dst.texture)->GetNative(),
+      .x = 0,
+      .y = 0,
+      .w = dst.width,
+      .h = dst.height,
+      .d = dst.depth,
+  };
+  SDL_UploadToGPUTexture(this->copyPass, &transferInfo, &region, cycle);
+}
+void SDLGPUCopyPass::DownloadTexture(const TextureRegion &src,
+                                     const TextureTransferInfo &dst,
+                                     bool cycle) {}
+void SDLGPUCopyPass::UploadBuffer(const BufferTransferInfo &src,
+                                  const BufferRegion &dst, bool cycle) {
+  SDL_GPUTransferBufferLocation transferInfo = {
+      .transfer_buffer =
+          DownCast<SDLGPUTransferBuffer>(src.transferBuffer)->GetNative(),
+      .offset = src.offset};
+  SDL_GPUBufferRegion region = {
+      .buffer = DownCast<SDLGPUBuffer>(dst.buffer)->GetNative(),
+      .offset = dst.offset,
+      .size = dst.size};
+  SDL_UploadToGPUBuffer(this->copyPass, &transferInfo, &region, cycle);
+}
+void SDLGPUCopyPass::DownloadBuffer(const BufferRegion &src,
+                                    const BufferTransferInfo &dst, bool cycle) {
+}
+void SDLGPURenderPass::BindGraphicsPipeline(Ptr<GraphicsPipeline> pipeline) {
+  SDL_BindGPUGraphicsPipeline(
+      this->renderPass,
+      DownCast<SDLGPUGraphicsPipeline>(pipeline)->GetNative());
+}
+void SDLGPURenderPass::BindVertexBuffers(uint32_t startSlot,
+                                         const Array<BufferBinding> &bindings) {
+  Array<SDL_GPUBufferBinding> bufferBindings(bindings.size());
+  for (int i = 0; i < bindings.size(); ++i) {
+    bufferBindings[i] = {};
+    bufferBindings[i].buffer =
+        DownCast<SDLGPUBuffer>(bindings[i].buffer)->GetNative();
+    bufferBindings[i].offset = bindings[i].offset;
+  }
+  SDL_BindGPUVertexBuffers(this->renderPass, startSlot, bufferBindings.data(),
+                           bufferBindings.size());
+}
+void SDLGPURenderPass::BindFragmentSamplers(
+    uint32_t startSlot, const Array<TextureSamplerBinding> &bindings) {
+  Array<SDL_GPUTextureSamplerBinding> samplerBindings(bindings.size());
+  for (int i = 0; i < samplerBindings.size(); ++i) {
+    samplerBindings[i] = {};
+    samplerBindings[i].sampler =
+        DownCast<SDLGPUSampler>(bindings[i].sampler)->GetNative();
+    samplerBindings[i].texture =
+        DownCast<SDLGPUTexture>(bindings[i].texture)->GetNative();
+  }
+  SDL_BindGPUFragmentSamplers(this->renderPass, startSlot,
+                              samplerBindings.data(), samplerBindings.size());
+}
+void SDLGPURenderPass::DrawPrimitives(uint32_t vertexCount,
+                                      uint32_t instanceCount,
+                                      uint32_t firstVertex,
+                                      uint32_t firstInstance) {
+  SDL_DrawGPUPrimitives(this->renderPass, vertexCount, instanceCount,
+                        firstVertex, firstInstance);
+}
+Ptr<CopyPass> SDLGPUCommandBuffer::BeginCopyPass() {
+  auto *pass = SDL_BeginGPUCopyPass(this->commandBuffer);
+  return MakePtr<SDLGPUCopyPass>(GetCreateInfo().allocator,
+                                 GetCreateInfo().allocator, *this, pass);
+}
+void SDLGPUCommandBuffer::EndCopyPass(Ptr<CopyPass> copyPass) {
+  SDL_EndGPUCopyPass(DownCast<SDLGPUCopyPass>(copyPass)->GetNative());
+}
+namespace convert {
+SDL_GPULoadOp LoadOpFrom(LoadOp loadOp) {
+  switch (loadOp) {
+  case LoadOp::Clear:
+    return SDL_GPU_LOADOP_CLEAR;
+  case LoadOp::Load:
+    return SDL_GPU_LOADOP_LOAD;
+  case LoadOp::DontCare:
+    return SDL_GPU_LOADOP_DONT_CARE;
+  }
+  return SDL_GPU_LOADOP_LOAD;
+}
+SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp) {
+  switch (storeOp) {
+  case StoreOp::Store:
+    return SDL_GPU_STOREOP_STORE;
+  case StoreOp::DontCare:
+    return SDL_GPU_STOREOP_DONT_CARE;
+  }
+  return SDL_GPU_STOREOP_STORE;
+}
+} // namespace convert
+Ptr<RenderPass> SDLGPUCommandBuffer::BeginRenderPass(
+    const Array<RenderPass::ColorTargetInfo> &infos) {
+  Array<SDL_GPUColorTargetInfo> colorTargetInfos(infos.size());
+  for (int i = 0; i < infos.size(); ++i) {
+    colorTargetInfos[i] = {};
+    colorTargetInfos[i].texture =
+        DownCast<SDLGPUTexture>(infos[i].texture)->GetNative();
+    colorTargetInfos[i].load_op = convert::LoadOpFrom(infos[i].loadOp);
+    colorTargetInfos[i].store_op = convert::StoreOpFrom(infos[i].storeOp);
+    colorTargetInfos[i].clear_color = {0, 0, 0, 0};
+  }
+  auto *renderPass = SDL_BeginGPURenderPass(
+      commandBuffer, colorTargetInfos.data(), colorTargetInfos.size(), NULL);
+  return MakePtr<SDLGPURenderPass>(
+      GetCreateInfo().allocator, GetCreateInfo().allocator, *this, renderPass);
+}
+void SDLGPUCommandBuffer::EndRenderPass(Ptr<RenderPass> renderPass) {
+  SDL_EndGPURenderPass(DownCast<SDLGPURenderPass>(renderPass)->GetNative());
+}
+SDLGPUDevice::~SDLGPUDevice() { SDL_DestroyGPUDevice(device); }
 void SDLGPUDevice::ClaimWindow(void *window) {
   if (!SDL_ClaimWindowForGPUDevice(device, static_cast<SDL_Window *>(window))) {
     std::cout << "Failed to claim window for GPU device" << std::endl;
   }
+  this->window = static_cast<SDL_Window *>(window);
 }
 
 Ptr<TransferBuffer> SDLGPUDevice::CreateTransferBuffer(
@@ -90,6 +212,10 @@ Ptr<Shader> SDLGPUDevice::CreateShader(const Shader::CreateInfo &createInfo) {
   shaderCI.code = reinterpret_cast<const Uint8 *>(createInfo.data);
   shaderCI.format = SDL_GPU_SHADERFORMAT_SPIRV;
   shaderCI.entrypoint = createInfo.entrypoint;
+  shaderCI.num_samplers = createInfo.numSamplers;
+  shaderCI.num_storage_textures = createInfo.numStorageTextures;
+  shaderCI.num_uniform_buffers = createInfo.numUniformBuffers;
+
   auto *shader = SDL_CreateGPUShader(device, &shaderCI);
   return MakePtr<SDLGPUShader>(createInfo.allocator, createInfo, shader);
 }
@@ -101,13 +227,62 @@ SDLGPUDevice::CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
 }
 Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
     const GraphicsPipeline::CreateInfo &createInfo) {
+  SDL_GPUGraphicsPipelineCreateInfo pipelineCI = {};
+  pipelineCI.vertex_shader =
+      DownCast<SDLGPUShader>(createInfo.vertexShader)->GetNative();
+  pipelineCI.fragment_shader =
+      DownCast<SDLGPUShader>(createInfo.fragmentShader)->GetNative();
+  pipelineCI.rasterizer_state.cull_mode = SDL_GPU_CULLMODE_NONE;
+  pipelineCI.rasterizer_state.front_face = SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+  pipelineCI.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+  pipelineCI.target_info.num_color_targets = 1;
+  SDL_GPUColorTargetDescription colorTargetDesc{};
+  colorTargetDesc.format = SDL_GetGPUSwapchainTextureFormat(
+      device, static_cast<SDL_Window *>(window));
+  SDL_GPUColorTargetDescription colorTargetDescs[] = {colorTargetDesc};
+  pipelineCI.target_info.color_target_descriptions = colorTargetDescs;
+  pipelineCI.vertex_input_state.num_vertex_attributes = 3;
+  pipelineCI.vertex_input_state.num_vertex_buffers = 1;
+  SDL_GPUVertexAttribute vertexAttributes[] = {
+      {0, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 0},
+      {1, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, sizeof(float) * 3},
+      {2, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, sizeof(float) * 5},
+  };
+  pipelineCI.vertex_input_state.vertex_attributes = vertexAttributes;
+  SDL_GPUVertexBufferDescription vbDesc = {};
+  vbDesc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
+  vbDesc.instance_step_rate = 0;
+  vbDesc.pitch = sizeof(float) * 8;
+  vbDesc.slot = 0;
+  SDL_GPUVertexBufferDescription vbDescs[] = {vbDesc};
+  pipelineCI.vertex_input_state.vertex_buffer_descriptions = vbDescs;
+
+  auto *pipeline = SDL_CreateGPUGraphicsPipeline(device, &pipelineCI);
   return MakePtr<SDLGPUGraphicsPipeline>(createInfo.allocator, createInfo,
-                                         nullptr);
+                                         pipeline);
 }
 Ptr<ComputePipeline> SDLGPUDevice::CreateComputePipeline(
     const ComputePipeline::CreateInfo &createInfo) {
   return MakePtr<SDLGPUComputePipeline>(createInfo.allocator, createInfo,
                                         nullptr);
+}
+void SDLGPUDevice::SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) {
+  SDL_SubmitGPUCommandBuffer(
+      DownCast<SDLGPUCommandBuffer>(commandBuffer)->GetNative());
+}
+Ptr<Texture>
+SDLGPUDevice::AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) {
+
+  auto raw = DownCast<SDLGPUCommandBuffer>(commandBuffer);
+  SDL_GPUTexture *nativeTex;
+  SDL_AcquireGPUSwapchainTexture(raw->GetNative(), window, &nativeTex, nullptr,
+                                 nullptr);
+
+  SDLGPUTexture::CreateInfo ci{};
+  ci.allocator = commandBuffer->GetCreateInfo().allocator;
+  auto texture = MakePtr<SDLGPUTexture>(
+      commandBuffer->GetCreateInfo().allocator, ci, *this, nativeTex);
+  return texture;
 }
 
 void SDLGPURenderer::Initialize(void *window) {

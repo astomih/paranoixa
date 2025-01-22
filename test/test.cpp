@@ -19,7 +19,7 @@ int main() {
   // TODO: Add unit tests
   MemoryAllocatorTest();
   PtrTest();
-  auto allocator = MakeAllocatorPtr<TLSFAllocator>(0x2000);
+  auto allocator = MakeAllocatorPtr<TLSFAllocator>(0x4000);
   StdAllocator<int> stdAllocator{allocator};
   std::vector<int, StdAllocator<int>> vec({allocator});
   vec.push_back(1);
@@ -34,7 +34,7 @@ int main() {
         SDL_CreateWindow("test", surface->w, surface->h, windowFlags);
     auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::SDLGPU});
     auto backend = app.CreateBackend(GraphicsAPI::SDLGPU);
-    auto device = backend->CreateDevice({allocator, false});
+    auto device = backend->CreateDevice({allocator, true});
     device->ClaimWindow(window);
 
     std::vector<uint8_t> data;
@@ -100,9 +100,9 @@ int main() {
         .data = fragCode.data(),
         .entrypoint = "main",
         .stage = ShaderStage::Fragment,
-        .numSamplers = 0,
+        .numSamplers = 1,
         .numStorageTextures = 0,
-        .numUniformBuffers = 0,
+        .numUniformBuffers = 2,
     };
     auto fs = device->CreateShader(fsci);
 
@@ -237,10 +237,32 @@ int main() {
         .texture = swapchainTexture,
         .loadOp = LoadOp::Clear,
         .storeOp = StoreOp::Store,
-
     };
-    RenderPass::ColorTargetInfo colorTargetInfos[] = {colorTargetInfo};
-    auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos, 1);
+    Array<RenderPass::ColorTargetInfo> colorTargetInfos;
+    colorTargetInfos.push_back(colorTargetInfo);
+    auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
+    renderPass->BindGraphicsPipeline(pipeline);
+    Array<RenderPass::BufferBinding> bindings;
+    bindings.push_back({vertexBuffer, 0});
+
+    renderPass->BindVertexBuffers(0, bindings);
+    Array<RenderPass::TextureSamplerBinding> textureBindings;
+    textureBindings.push_back({sampler, texture});
+    renderPass->BindFragmentSamplers(0, textureBindings);
+    renderPass->DrawPrimitives(6, 1, 0, 0);
+    cmdbuf->EndRenderPass(renderPass);
+    device->SubmitCommandBuffer(cmdbuf);
+
+    bool running = true;
+    while (running) {
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_EVENT_QUIT) {
+          running = false;
+          break;
+        }
+      }
+    }
 
     return 0;
   }

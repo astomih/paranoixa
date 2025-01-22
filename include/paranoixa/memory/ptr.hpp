@@ -205,6 +205,10 @@ UniquePtr<T> MakeUnique(AllocatorPtr allocator, Args &&...args) {
                                       T(std::forward<Args>(args)...)});
 }
 
+template <class Derived, class Base> Ptr<Derived> DownCast(Ptr<Base> ptr) {
+  return Ptr<Derived>(ptr);
+}
+
 } // namespace paranoixa
 
 #endif
