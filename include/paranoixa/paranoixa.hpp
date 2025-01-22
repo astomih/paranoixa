@@ -1,16 +1,16 @@
 #ifndef PARANOIXA_HPP
 #define PARANOIXA_HPP
-#include "memory/allocator.hpp"
+#include "allocator.hpp"
 #include <cassert>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <print>
 
-#include "memory/ptr.hpp"
-#include "memory/ref.hpp"
+#include "ptr.hpp"
+#include "ref.hpp"
 
-#include "renderer/renderer.hpp"
+#include "renderer.hpp"
 
 #ifdef _DEBUG
 #define PARANOIXA_BUILD_DEBUG

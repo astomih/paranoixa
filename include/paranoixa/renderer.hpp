@@ -4,8 +4,8 @@
 #include <functional>
 #include <vector>
 
-#include "../memory/allocator.hpp"
-#include "../memory/ptr.hpp"
+#include "allocator.hpp"
+#include "ptr.hpp"
 
 namespace paranoixa {
 #include <vector>

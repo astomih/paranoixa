@@ -1,8 +1,8 @@
 #include "../library/imgui/imgui.h"
-#include "paranoixa/renderer/renderer.hpp"
+#include "paranoixa/renderer.hpp"
 
-#include <paranoixa/memory/tlsf_allocator.hpp>
 #include <paranoixa/paranoixa.hpp>
+#include <paranoixa/tlsf_allocator.hpp>
 
 #include <SDL3/SDL.h>
 

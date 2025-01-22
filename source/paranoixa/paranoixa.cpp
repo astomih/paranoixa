@@ -3,12 +3,15 @@
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
-#include "renderer/d3d12u/d3d12u_renderer.hpp"
-#include "renderer/renderer.hpp"
-#include "renderer/sdlgpu/sdlgpu_renderer.hpp"
-#include "renderer/vulkan/vulkan_renderer.hpp"
-#include "renderer/webgpu/webgpu_renderer.hpp"
+#include "renderer.hpp"
+
+#include "d3d12u/d3d12u_renderer.hpp"
+#include "sdlgpu/sdlgpu_renderer.hpp"
+#include "vulkan/vulkan_renderer.hpp"
+#include "webgpu/webgpu_renderer.hpp"
+
 #include <SDL3/SDL.h>
+
 #include <fstream>
 #include <iostream>
 namespace paranoixa {

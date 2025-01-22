@@ -1,8 +1,8 @@
 #ifndef EMSCRIPTEN
 #ifndef PARANOIXA_SDLGPU_RENDERER_HPP
 #define PARANOIXA_SDLGPU_RENDERER_HPP
-#include "paranoixa.hpp"
-#include "renderer/renderer.hpp"
+#include "renderer.hpp"
+#include <paranoixa.hpp>
 
 #include <SDL3/SDL_gpu.h>
 
