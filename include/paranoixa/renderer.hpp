@@ -9,7 +9,11 @@
 
 namespace paranoixa {
 #include <vector>
-template <typename T> using Array = std::vector<T>;
+
+template <typename T> class Array : public std::vector<T, StdAllocator<T>> {
+public:
+  Array(AllocatorPtr allocator) : std::vector<T, StdAllocator<T>>(allocator) {}
+};
 class FileLoader {
 public:
   bool Load(const char *filePath, std::vector<char> &fileData,
@@ -349,7 +353,6 @@ public:
     Ptr<Sampler> sampler;
     Ptr<Texture> texture;
   };
-  RenderPass() = default;
   virtual ~RenderPass() = default;
 
   virtual void BindGraphicsPipeline(Ptr<GraphicsPipeline> graphicsPipeline) = 0;
@@ -361,8 +364,8 @@ public:
   virtual void DrawPrimitives(uint32_t numVertices, uint32_t numInstances,
                               uint32_t firstVertex, uint32_t firstInstance) = 0;
 
-private:
-  AllocatorPtr allocator;
+protected:
+  RenderPass() = default;
 };
 
 class CommandBuffer {

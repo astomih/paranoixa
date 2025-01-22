@@ -12,7 +12,7 @@ namespace paranoixa {
 class SDLGPUDevice : public Device {
 public:
   SDLGPUDevice(const CreateInfo &createInfo, SDL_GPUDevice *device)
-      : Device(createInfo), device(device) {}
+      : Device(createInfo), device(device), window(nullptr) {}
   SDL_GPUDevice *GetNative() { return device; }
   virtual ~SDLGPUDevice() override;
   virtual void ClaimWindow(void *window) override;
@@ -45,6 +45,8 @@ public:
   SDLGPUTexture(const CreateInfo &createInfo, Device &device,
                 SDL_GPUTexture *texture)
       : Texture(createInfo), texture(texture) {}
+  virtual ~SDLGPUTexture() override;
+
   inline SDL_GPUTexture *GetNative() const { return texture; }
 
 private:
@@ -130,7 +132,8 @@ class SDLGPURenderPass : public RenderPass {
 public:
   SDLGPURenderPass(AllocatorPtr allocator, SDLGPUCommandBuffer &commandBuffer,
                    SDL_GPURenderPass *renderPass)
-      : RenderPass(), commandBuffer(commandBuffer), renderPass(renderPass) {}
+      : RenderPass(), allocator(allocator), commandBuffer(commandBuffer),
+        renderPass(renderPass) {}
 
   inline SDL_GPURenderPass *GetNative() const { return renderPass; }
 
@@ -144,6 +147,7 @@ public:
                       uint32_t firstVertex, uint32_t firstInstance) override;
 
 private:
+  AllocatorPtr allocator;
   SDL_GPURenderPass *renderPass;
   class SDLGPUCommandBuffer &commandBuffer;
 };
@@ -168,12 +172,15 @@ private:
 
 class SDLGPUGraphicsPipeline : public GraphicsPipeline {
 public:
-  SDLGPUGraphicsPipeline(const CreateInfo &createInfo,
+  SDLGPUGraphicsPipeline(const CreateInfo &createInfo, SDLGPUDevice &device,
                          SDL_GPUGraphicsPipeline *pipeline)
-      : GraphicsPipeline(createInfo), pipeline(pipeline) {}
+      : GraphicsPipeline(createInfo), device(device), pipeline(pipeline) {}
+  ~SDLGPUGraphicsPipeline() override;
+
   inline SDL_GPUGraphicsPipeline *GetNative() { return pipeline; }
 
 private:
+  SDLGPUDevice &device;
   SDL_GPUGraphicsPipeline *pipeline;
 };
 

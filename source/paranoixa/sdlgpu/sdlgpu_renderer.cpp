@@ -58,7 +58,8 @@ void SDLGPURenderPass::BindGraphicsPipeline(Ptr<GraphicsPipeline> pipeline) {
 }
 void SDLGPURenderPass::BindVertexBuffers(uint32_t startSlot,
                                          const Array<BufferBinding> &bindings) {
-  Array<SDL_GPUBufferBinding> bufferBindings(bindings.size());
+  Array<SDL_GPUBufferBinding> bufferBindings(allocator);
+  bufferBindings.resize(bindings.size());
   for (int i = 0; i < bindings.size(); ++i) {
     bufferBindings[i] = {};
     bufferBindings[i].buffer =
@@ -70,7 +71,8 @@ void SDLGPURenderPass::BindVertexBuffers(uint32_t startSlot,
 }
 void SDLGPURenderPass::BindFragmentSamplers(
     uint32_t startSlot, const Array<TextureSamplerBinding> &bindings) {
-  Array<SDL_GPUTextureSamplerBinding> samplerBindings(bindings.size());
+  Array<SDL_GPUTextureSamplerBinding> samplerBindings(allocator);
+  samplerBindings.resize(bindings.size());
   for (int i = 0; i < samplerBindings.size(); ++i) {
     samplerBindings[i] = {};
     samplerBindings[i].sampler =
@@ -120,7 +122,8 @@ SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp) {
 } // namespace convert
 Ptr<RenderPass> SDLGPUCommandBuffer::BeginRenderPass(
     const Array<RenderPass::ColorTargetInfo> &infos) {
-  Array<SDL_GPUColorTargetInfo> colorTargetInfos(infos.size());
+  Array<SDL_GPUColorTargetInfo> colorTargetInfos(GetCreateInfo().allocator);
+  colorTargetInfos.resize(infos.size());
   for (int i = 0; i < infos.size(); ++i) {
     colorTargetInfos[i] = {};
     colorTargetInfos[i].texture =
@@ -136,6 +139,9 @@ Ptr<RenderPass> SDLGPUCommandBuffer::BeginRenderPass(
 }
 void SDLGPUCommandBuffer::EndRenderPass(Ptr<RenderPass> renderPass) {
   SDL_EndGPURenderPass(DownCast<SDLGPURenderPass>(renderPass)->GetNative());
+}
+SDLGPUGraphicsPipeline::~SDLGPUGraphicsPipeline() {
+  SDL_ReleaseGPUGraphicsPipeline(device.GetNative(), pipeline);
 }
 SDLGPUDevice::~SDLGPUDevice() { SDL_DestroyGPUDevice(device); }
 void SDLGPUDevice::ClaimWindow(void *window) {
@@ -259,7 +265,7 @@ Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
 
   auto *pipeline = SDL_CreateGPUGraphicsPipeline(device, &pipelineCI);
   return MakePtr<SDLGPUGraphicsPipeline>(createInfo.allocator, createInfo,
-                                         pipeline);
+                                         *this, pipeline);
 }
 Ptr<ComputePipeline> SDLGPUDevice::CreateComputePipeline(
     const ComputePipeline::CreateInfo &createInfo) {
@@ -284,6 +290,7 @@ SDLGPUDevice::AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) {
       commandBuffer->GetCreateInfo().allocator, ci, *this, nativeTex);
   return texture;
 }
+SDLGPUTexture::~SDLGPUTexture() {}
 
 void SDLGPURenderer::Initialize(void *window) {
 

@@ -238,15 +238,15 @@ int main() {
         .loadOp = LoadOp::Clear,
         .storeOp = StoreOp::Store,
     };
-    Array<RenderPass::ColorTargetInfo> colorTargetInfos;
+    auto colorTargetInfos = Array<RenderPass::ColorTargetInfo>(allocator);
     colorTargetInfos.push_back(colorTargetInfo);
     auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
     renderPass->BindGraphicsPipeline(pipeline);
-    Array<RenderPass::BufferBinding> bindings;
+    Array<RenderPass::BufferBinding> bindings(allocator);
     bindings.push_back({vertexBuffer, 0});
 
     renderPass->BindVertexBuffers(0, bindings);
-    Array<RenderPass::TextureSamplerBinding> textureBindings;
+    auto textureBindings = Array<RenderPass::TextureSamplerBinding>(allocator);
     textureBindings.push_back({sampler, texture});
     renderPass->BindFragmentSamplers(0, textureBindings);
     renderPass->DrawPrimitives(6, 1, 0, 0);
