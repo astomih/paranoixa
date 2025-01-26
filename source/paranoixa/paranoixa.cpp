@@ -3,7 +3,7 @@
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
-#include "renderer.hpp"
+#include "tlsf_allocator.hpp"
 
 #include "d3d12u/d3d12u_renderer.hpp"
 #include "sdlgpu/sdlgpu_renderer.hpp"
@@ -49,7 +49,6 @@ bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
 static SDL_Window *window = nullptr;
 static bool running = true;
 Paranoixa::~Paranoixa() {
-  renderer.Reset();
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
@@ -73,10 +72,11 @@ Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
   }
   return nullptr;
 }
-Paranoixa::Paranoixa(const Desc &desc)
-    : allocator(desc.allocator), renderer(desc.allocator) {}
+AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
+  return MakeAllocatorPtr<TLSFAllocator>(size);
+}
+Paranoixa::Paranoixa(const Desc &desc) : allocator(desc.allocator) {}
 void *Paranoixa::GetWindow() { return static_cast<void *>(window); }
-Ref<Renderer> Paranoixa::GetRenderer() { return Ref<Renderer>(renderer); }
 void Paranoixa::Run() {
 #ifndef __EMSCRIPTEN__
   while (this->IsRunning()) {
@@ -95,12 +95,9 @@ bool Paranoixa::IsRunning() { return running; }
 void Paranoixa::Loop() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
-    renderer->ProcessEvent(&event);
     if (event.type == SDL_EVENT_QUIT) {
       running = false;
     }
   }
-  renderer->BeginFrame();
-  renderer->EndFrame();
 }
 } // namespace paranoixa

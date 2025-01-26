@@ -1,8 +1,8 @@
 #ifndef PARANOIXA_WEBGPU_RENDERER_HPP
 #define PARANOIXA_WEBGPU_RENDERER_HPP
-#include <renderer.hpp>
 
 #include <SDL3/SDL.h>
+#include <paranoixa.hpp>
 #include <webgpu/webgpu.h>
 
 namespace paranoixa {

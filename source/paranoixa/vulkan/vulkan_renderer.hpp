@@ -3,7 +3,6 @@
 #define PARANOIXA_VULKAN_RENDERER_HPP
 // Emscripten doesn't support Vulkan
 #ifndef __EMSCRIPTEN__
-#include <renderer.hpp>
 
 #include <vector>
 #include <vulkan/vulkan.h>
