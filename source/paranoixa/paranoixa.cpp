@@ -53,7 +53,7 @@ Paranoixa::~Paranoixa() {
   SDL_Quit();
 }
 Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
-#ifndef _EMSCRIPTEN_
+#ifndef __EMSCRIPTEN__
   switch (api) {
   case GraphicsAPI::Vulkan: {
     // TODO
