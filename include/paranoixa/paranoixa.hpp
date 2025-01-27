@@ -104,21 +104,54 @@ struct VertexInputState {
 };
 enum class PrimitiveType {
   TriangleList,
+  TriangleStrip,
+  LineList,
+  LineStrip,
+  PointList,
+
+};
+enum class FillMode {
+  Solid,
+  Wireframe,
+};
+enum class CullMode {
+  None,
+  Front,
+  Back,
+};
+enum class FrontFace {
+  Clockwise,
+  CounterClockwise,
+};
+enum class BlendFactor {
+  Zero,
+  One,
+  SrcColor,
+  OneMinusSrcColor,
+  DstColor,
+  OneMinusDstColor,
+  SrcAlpha,
+  OneMinusSrcAlpha,
+  DstAlpha,
+  OneMinusDstAlpha,
+  ConstantColor,
+  OneMinusConstantColor,
+  ConstantAlpha,
+  OneMinusConstantAlpha,
+  SrcAlphaSaturate,
+  Src1Color,
+  OneMinusSrc1Color,
+  Src1Alpha,
+  OneMinusSrc1Alpha,
+};
+enum class BlendOp {
+  Add,
+  Subtract,
+  ReverseSubtract,
+  Min,
+  Max,
 };
 struct RasterizerState {
-  enum class FillMode {
-    Solid,
-    Wireframe,
-  };
-  enum class CullMode {
-    None,
-    Front,
-    Back,
-  };
-  enum class FrontFace {
-    Clockwise,
-    CounterClockwise,
-  };
   FillMode fillMode;
   CullMode cullMode;
   FrontFace frontFace;
@@ -137,34 +170,6 @@ struct DepthStencilState {
   uint32_t stencilWriteMask;
 };
 struct ColorTargetBlendState {
-  enum class BlendFactor {
-    Zero,
-    One,
-    SrcColor,
-    OneMinusSrcColor,
-    DstColor,
-    OneMinusDstColor,
-    SrcAlpha,
-    OneMinusSrcAlpha,
-    DstAlpha,
-    OneMinusDstAlpha,
-    ConstantColor,
-    OneMinusConstantColor,
-    ConstantAlpha,
-    OneMinusConstantAlpha,
-    SrcAlphaSaturate,
-    Src1Color,
-    OneMinusSrc1Color,
-    Src1Alpha,
-    OneMinusSrc1Alpha,
-  };
-  enum class BlendOp {
-    Add,
-    Subtract,
-    ReverseSubtract,
-    Min,
-    Max,
-  };
   BlendFactor srcColorBlendFactor;
   BlendFactor dstColorBlendFactor;
   BlendOp colorBlendOp;
