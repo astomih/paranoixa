@@ -26,6 +26,7 @@ AllocatorPtr MakeAllocatorPtr(Args &&...args) {
 template <typename T> class StdAllocator : public std::allocator<T> {
 public:
   using value_type = T;
+  StdAllocator() = default;
   StdAllocator(AllocatorPtr allocator) : allocator(allocator) {}
   template <typename U>
   StdAllocator(const StdAllocator<U> &other) : allocator(other.allocator) {}

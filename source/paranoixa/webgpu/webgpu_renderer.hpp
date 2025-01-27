@@ -1,8 +1,8 @@
 #ifndef PARANOIXA_WEBGPU_RENDERER_HPP
 #define PARANOIXA_WEBGPU_RENDERER_HPP
-#include <renderer/renderer.hpp>
 
 #include <SDL3/SDL.h>
+#include <paranoixa.hpp>
 #include <webgpu/webgpu.h>
 
 namespace paranoixa {
@@ -38,7 +38,11 @@ private:
   void InitializePipeline();
 
   WGPUTextureView GetNextSurfaceTextureView();
-  WGPUStringView GetStringView(const char *str);
+  #ifdef DAWN
+  WGPUStringView  GetStringView(const char *str);
+  #else
+  const char* GetStringView(const char *str);
+  #endif
 
   // WebGPU instance
   WGPUInstance instance;

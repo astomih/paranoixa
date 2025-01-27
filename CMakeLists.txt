@@ -21,31 +21,12 @@ if(WIN32)
   set(PARANOIXA_USE_WEBGPU ON)
 
   if(PARANOIXA_USE_WEBGPU)
-    set(DAWN_ENABLE_D3D11 OFF)
-    set(DAWN_ENABLE_D3D12 OFF)
-    set(DAWN_ENABLE_METAL OFF)
-    set(DAWN_ENABLE_NULL OFF)
-    set(DAWN_ENABLE_DESKTOP_GL OFF)
-    set(DAWN_ENABLE_OPENGLES OFF)
-    set(DAWN_ENABLE_VULKAN ON)
-    set(DAWN_USE_GLFW OFF)
-    set(DAWN_USE_WINDOWS_UI OFF)
-    set(TINT_BUILD_SPV_READER OFF)
-
-    # Disable unneeded parts
-    set(DAWN_BUILD_SAMPLES OFF)
-    set(TINT_BUILD_CMD_TOOLS OFF)
-    set(TINT_BUILD_TESTS OFF)
-    set(TINT_BUILD_IR_BINARY OFF)
-
-    set(DAWN_FETCH_DEPENDENCIES ON)
-
     set(CMAKE_FOLDER "dawn")
-    add_subdirectory(library/dawn EXCLUDE_FROM_ALL)
+    add_subdirectory(library/WebGPU-distribution EXCLUDE_FROM_ALL)
     unset(CMAKE_FOLDER)
   endif()
 
-  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_DAWN")
+  set(CMAKE_CXX_FLAGS "-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES -DIMGUI_IMPL_WEBGPU_BACKEND_WGPU")
 
   find_package(Vulkan REQUIRED)
   set(PARANOIXA_INCLUDE_DIRS
@@ -119,12 +100,12 @@ endif()
 if(WIN32)
   if(PARANOIXA_USE_WEBGPU)
     target_link_libraries(paranoixa PRIVATE
-      dawn::webgpu_dawn
-      webgpu_dawn
+      webgpu
       SDL3::SDL3
       d3d12
       dxgi
     )
+    target_copy_webgpu_binaries(paranoixa)
   else()
     target_link_libraries(paranoixa PRIVATE
       SDL3::SDL3

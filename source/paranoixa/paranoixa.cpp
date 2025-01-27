@@ -3,12 +3,15 @@
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
-#include "renderer/d3d12u/d3d12u_renderer.hpp"
-#include "renderer/renderer.hpp"
-#include "renderer/sdlgpu/sdlgpu_renderer.hpp"
-#include "renderer/vulkan/vulkan_renderer.hpp"
-#include "renderer/webgpu/webgpu_renderer.hpp"
+#include "tlsf_allocator.hpp"
+
+#include "d3d12u/d3d12u_renderer.hpp"
+#include "sdlgpu/sdlgpu_renderer.hpp"
+#include "vulkan/vulkan_renderer.hpp"
+#include "webgpu/webgpu_renderer.hpp"
+
 #include <SDL3/SDL.h>
+
 #include <fstream>
 #include <iostream>
 namespace paranoixa {
@@ -46,55 +49,38 @@ bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
 static SDL_Window *window = nullptr;
 static bool running = true;
 Paranoixa::~Paranoixa() {
-  renderer.Reset();
   SDL_DestroyWindow(window);
   SDL_Quit();
 }
-Paranoixa::Paranoixa(const Desc &desc)
-    : allocator(desc.allocator), renderer(desc.allocator) {
-  std::string windowName;
-  uint32_t windowFlags = SDL_WINDOW_RESIZABLE;
+Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
 #ifndef __EMSCRIPTEN__
-  switch (desc.api) {
-  case GraphicsAPI::D3D12U: {
-    renderer = MakeUnique<D3d12uRenderer>(allocator, allocator);
-    windowName = "Paranoixa ( Native Direct3D12 )";
-    break;
-  }
-  case GraphicsAPI::WebGPU: {
-    renderer = MakeUnique<WebGPURenderer>(allocator, allocator);
-    windowName = "Paranoixa ( Native WebGPU )";
-    break;
-  }
+  switch (api) {
   case GraphicsAPI::Vulkan: {
-
-    renderer = MakeUnique<VulkanRenderer>(allocator);
-    windowFlags |= SDL_WINDOW_VULKAN;
-    windowName = "Paranoixa ( Native Vulkan )";
-    break;
+    // TODO
+  }
+#ifdef _WIN32
+  case GraphicsAPI::D3D12U: {
+    // TODO
+  }
+#endif
+  case GraphicsAPI::WebGPU: {
+    // TODO
   }
   case GraphicsAPI::SDLGPU: {
-    renderer = MakeUnique<SDLGPURenderer>(allocator, allocator);
-    windowName = "Paranoixa ( Native SDL_GPU )";
-    break;
+    Ptr<Backend> p = MakePtr<SDLGPUBackend>(allocator);
+    return p;
   }
+  default:
+    return nullptr;
   }
-#else
-  renderer = MakeUnique<WebGPURenderer>(allocator);
-  windowName = "Paranoixa ( WASM )";
 #endif
-
-  if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
-                 SDL_GetError());
-  }
-  SDL_Surface *surface = SDL_LoadBMP("res/texture.bmp");
-  window =
-      SDL_CreateWindow(windowName.c_str(), surface->w, surface->h, windowFlags);
-  renderer->Initialize(window);
-  SDL_DestroySurface(surface);
+  return nullptr;
 }
-Ref<Renderer> Paranoixa::GetRenderer() { return Ref<Renderer>(renderer); }
+AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
+  return MakeAllocatorPtr<TLSFAllocator>(size);
+}
+Paranoixa::Paranoixa(const Desc &desc) : allocator(desc.allocator) {}
+void *Paranoixa::GetWindow() { return static_cast<void *>(window); }
 void Paranoixa::Run() {
 #ifndef __EMSCRIPTEN__
   while (this->IsRunning()) {
@@ -113,12 +99,9 @@ bool Paranoixa::IsRunning() { return running; }
 void Paranoixa::Loop() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
-    renderer->ProcessEvent(&event);
     if (event.type == SDL_EVENT_QUIT) {
       running = false;
     }
   }
-  renderer->BeginFrame();
-  renderer->EndFrame();
 }
 } // namespace paranoixa
