@@ -201,9 +201,9 @@ int main() {
         .primitiveType = PrimitiveType::TriangleList,
         .rasterizerState =
             RasterizerState{
-                .fillMode = RasterizerState::FillMode::Solid,
-                .cullMode = RasterizerState::CullMode::None,
-                .frontFace = RasterizerState::FrontFace::Clockwise,
+                .fillMode = FillMode::Solid,
+                .cullMode = CullMode::None,
+                .frontFace = FrontFace::Clockwise,
             },
         .multiSampleState = {},
         .depthStencilState = {},
