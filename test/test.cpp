@@ -10,6 +10,10 @@
 void MemoryAllocatorTest();
 void PtrTest();
 
+#ifndef _countof
+#define _countof(x) (sizeof(x) / sizeof(x[0]))
+#endif
+
 int main() {
 
   using namespace paranoixa;
