@@ -7,9 +7,6 @@
 [submodule "library/tlsf"]
 	path = library/tlsf
 	url = https://github.com/mattconte/tlsf
-[submodule "library/dawn"]
-	path = library/dawn
-	url = https://dawn.googlesource.com/dawn
 [submodule "library/VulkanMemoryAllocator"]
 	path = library/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
@@ -19,3 +16,6 @@
 [submodule "library/imnodes"]
 	path = library/imnodes
 	url = https://github.com/Nelarius/imnodes
+[submodule "library/WebGPU-distribution"]
+	path = library/WebGPU-distribution
+	url = https://github.com/eliemichel/WebGPU-distribution
