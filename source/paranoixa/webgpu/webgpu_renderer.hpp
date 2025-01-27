@@ -38,7 +38,11 @@ private:
   void InitializePipeline();
 
   WGPUTextureView GetNextSurfaceTextureView();
-  WGPUStringView GetStringView(const char *str);
+  #ifdef DAWN
+  WGPUStringView  GetStringView(const char *str);
+  #else
+  const char* GetStringView(const char *str);
+  #endif
 
   // WebGPU instance
   WGPUInstance instance;

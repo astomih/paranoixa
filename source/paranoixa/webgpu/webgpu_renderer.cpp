@@ -224,6 +224,7 @@ void WebGPURenderer::PrepareSurface(void *window) {
         SDL_GetWindowProperties(static_cast<SDL_Window *>(window)),
         SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
     HINSTANCE hinstance = GetModuleHandle(nullptr);
+#ifdef DAWN
     WGPUSurfaceSourceWindowsHWND desc{
         .chain =
             WGPUChainedStruct{
@@ -232,6 +233,17 @@ void WebGPURenderer::PrepareSurface(void *window) {
             },
         .hinstance = hinstance,
         .hwnd = hwnd};
+#else
+    WGPUSurfaceDescriptorFromWindowsHWND desc{
+        .chain =
+            WGPUChainedStruct{
+                .next = nullptr,
+                .sType = WGPUSType_SurfaceDescriptorFromWindowsHWND,
+            },
+        .hinstance = hinstance,
+        .hwnd = hwnd};
+#endif
+
     auto descriptor =
         WGPUSurfaceDescriptor{.nextInChain = &desc.chain, .label = nullptr};
     surface = wgpuInstanceCreateSurface(instance, &descriptor);
@@ -258,18 +270,28 @@ void WebGPURenderer::PrepareAdapter() {
   };
   WGPURequestAdapterOptions adapterOpts = {};
   adapterOpts.nextInChain = nullptr;
+#ifdef DAWN
   auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status,
                                   WGPUAdapter adapter, WGPUStringView message,
                                   void *pUserData) {
+#else
+  auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status,
+                                  WGPUAdapter adapter, const char *message,
+                                  void *pUserData) {
+#endif
     UserData &userData = *reinterpret_cast<UserData *>(pUserData);
     userData.adapterRequested = true;
     if (status == WGPURequestAdapterStatus_Success) {
       userData.adapter = adapter;
     } else {
       std::cout << "Could not get WebGPU adapter: ";
+#ifdef DAWN
       if (message.data) {
         std::cout << message.data;
       }
+#else
+      std::cout << message;
+#endif
     }
   };
   UserData userData{};
@@ -289,6 +311,7 @@ void WebGPURenderer::PrepareDevice() {
   };
   UserData userData;
 
+#ifdef DAWN
   auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status,
                                  WGPUDevice device, WGPUStringView message,
                                  void *pUserData) {
@@ -341,6 +364,7 @@ void WebGPURenderer::PrepareDevice() {
 
   wgpuAdapterRequestDevice(adapter, &descriptor, onDeviceRequestEnded,
                            &userData);
+#endif
 #ifdef __EMSCRIPTEN__
   while (!userData.requestEnded) {
     emscripten_sleep(100);
@@ -461,20 +485,28 @@ WGPUTextureView WebGPURenderer::GetNextSurfaceTextureView() {
   viewDescriptor.baseArrayLayer = 0;
   viewDescriptor.arrayLayerCount = 1;
   viewDescriptor.aspect = WGPUTextureAspect_All;
+#ifdef DAWN
   viewDescriptor.usage = WGPUTextureUsage_RenderAttachment;
+#endif
   WGPUTextureView targetView =
       wgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor);
   return targetView;
 }
+#ifdef DAWN
 WGPUStringView WebGPURenderer::GetStringView(const char *str) {
-  return {str, WGPU_STRLEN};
+  return {strWGPU_STRLEN};
 }
+#else
+const char *WebGPURenderer::GetStringView(const char *str) { return {str}; }
+#endif
 void WebGPURenderer::InitializePipeline() {
   WGPUShaderModuleDescriptor shaderDesc{};
   shaderDesc.label = GetStringView("Paranoixa Shader module");
   WGPUShaderModuleWGSLDescriptor wgslDesc{};
   wgslDesc.chain.next = nullptr;
+#ifdef DAWN
   wgslDesc.chain.sType = WGPUSType_ShaderSourceWGSL;
+#endif
   shaderDesc.nextInChain = &wgslDesc.chain;
 
   auto &fileLoader = GetFileLoader();
@@ -483,12 +515,21 @@ void WebGPURenderer::InitializePipeline() {
   fileLoader->Load("res/shader.vert.wgsl", vertCode, std::ios::in);
   fileLoader->Load("res/shader.frag.wgsl", fragCode, std::ios::in);
 
+#ifdef DAWN
   wgslDesc.code = {vertCode.data(), vertCode.size()};
   WGPUShaderModule vertShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
   wgslDesc.code = {fragCode.data(), fragCode.size()};
   WGPUShaderModule fragShaderModule =
       wgpuDeviceCreateShaderModule(device, &shaderDesc);
+#else
+  wgslDesc.code = {vertCode.data()};
+  WGPUShaderModule vertShaderModule =
+      wgpuDeviceCreateShaderModule(device, &shaderDesc);
+  wgslDesc.code = {fragCode.data()};
+  WGPUShaderModule fragShaderModule =
+      wgpuDeviceCreateShaderModule(device, &shaderDesc);
+#endif
 
   WGPURenderPipelineDescriptor pipelineDesc{};
   pipelineDesc.nextInChain = nullptr;
