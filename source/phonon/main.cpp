@@ -1,7 +1,4 @@
 #include "../library/imgui/imgui.h"
-#include "paranoixa/renderer/renderer.hpp"
-
-#include <paranoixa/memory/tlsf_allocator.hpp>
 #include <paranoixa/paranoixa.hpp>
 
 #include <SDL3/SDL.h>
@@ -139,7 +136,7 @@ int main() {
   using namespace paranoixa;
   MemoryAllocatorTest();
   PtrTest();
-  auto allocator = MakeAllocatorPtr<TLSFAllocator>(0x2000);
+  auto allocator = Paranoixa::CreateAllocator(0x2000);
   StdAllocator<int> stdAllocator{allocator};
   std::vector<int, StdAllocator<int>> vec({allocator});
   vec.push_back(1);
@@ -160,7 +157,7 @@ int main() {
     }
     SDL_SetAudioStreamGain(stream, 0.1f);
     example::NodeEditorInitialize();
-    app.GetRenderer()->AddGuiUpdateCallBack([]() {
+    ([]() {
       struct Node {
         int id;
         float value;
@@ -203,7 +200,7 @@ int main() {
           printf("Uhoh, failed to put samples in stream: %s\n", SDL_GetError());
         }
       }
-      // ImGui::End();
+       ImGui::End();
     });
     app.Run();
   }
@@ -211,38 +208,7 @@ int main() {
 }
 
 void MemoryAllocatorTest() {
-  using namespace paranoixa;
-  std::print("Memory Allocator Test");
-  Allocator *allocator = new TLSFAllocator(0x2000);
-  void *ptr = allocator->Allocate(128);
-  allocator->Free(ptr, 128);
-  delete allocator;
-  std::cout << "----------------------------------------------" << std::endl;
 }
 
 void PtrTest() {
-  struct A {
-    int a;
-  };
-  struct B : A {
-    B(int a) : A{a}, b(0) {}
-    int b;
-  };
-  using namespace paranoixa;
-  std::cout << "---------------PtrTest------------" << std::endl;
-  {
-    auto allocator = MakeAllocatorPtr<TLSFAllocator>(0x2000);
-    {
-      Ptr<A> ptr{allocator};
-      ptr = MakePtr<B>(allocator, 10);
-      std::cout << ptr->a << std::endl;
-      ptr.Reset();
-    }
-    {
-      UniquePtr<A> ptr{allocator};
-      ptr = MakeUnique<B>(allocator, 10);
-    }
-    std::cout << "allocator.count : " << allocator.use_count() << std::endl;
-  }
-  std::cout << "---------------------------------" << std::endl;
 }
