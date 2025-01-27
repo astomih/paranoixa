@@ -53,13 +53,16 @@ Paranoixa::~Paranoixa() {
   SDL_Quit();
 }
 Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
+#ifndef _EMSCRIPTEN_
   switch (api) {
   case GraphicsAPI::Vulkan: {
     // TODO
   }
+#ifdef _WIN32
   case GraphicsAPI::D3D12U: {
     // TODO
   }
+#endif
   case GraphicsAPI::WebGPU: {
     // TODO
   }
@@ -70,6 +73,7 @@ Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
   default:
     return nullptr;
   }
+#endif
   return nullptr;
 }
 AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
