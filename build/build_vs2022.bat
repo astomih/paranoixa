@@ -1,0 +1,1 @@
+cd msvc && msbuild paranoixa.sln /p:Configuration=Debug
