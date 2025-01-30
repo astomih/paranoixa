@@ -137,8 +137,8 @@ int main() {
   MemoryAllocatorTest();
   PtrTest();
   auto allocator = Paranoixa::CreateAllocator(0x2000);
-  StdAllocator<int> stdAllocator{allocator};
-  std::vector<int, StdAllocator<int>> vec({allocator});
+  STLAllocator<int> stdAllocator{allocator};
+  std::vector<int, STLAllocator<int>> vec({allocator});
   vec.push_back(1);
   {
 
@@ -177,7 +177,7 @@ int main() {
         for (i = 0; i < SDL_arraysize(samples); i++) {
           const float time = j / 44100.0f;
           constexpr int sine_freq = 500;
-//samples[i] += SDL_sinf(6.283185f * sine_freq * time);
+          // samples[i] += SDL_sinf(6.283185f * sine_freq * time);
           j++;
         }
         j = 0;
@@ -186,29 +186,27 @@ int main() {
           for (n = 0; n < 44100; n++) {
             const float time = n / 44100.0f;
             constexpr int sine_freq = 500;
-            samples[n] += 1.0f / i * SDL_sinf(6.283185f  *i* sine_freq * time);
+            samples[n] += 1.0f / i * SDL_sinf(6.283185f * i * sine_freq * time);
             j++;
           }
         }
-            float gain = 0.01f;
+        float gain = 0.01f;
         for (n = 0; n < 44100; n++) {
-          
-            samples[n] *= gain;
+
+          samples[n] *= gain;
         }
         int rc = SDL_PutAudioStreamData(stream, samples, sizeof(samples));
         if (rc == -1) {
           printf("Uhoh, failed to put samples in stream: %s\n", SDL_GetError());
         }
       }
-       ImGui::End();
+      ImGui::End();
     });
     app.Run();
   }
   return 0;
 }
 
-void MemoryAllocatorTest() {
-}
+void MemoryAllocatorTest() {}
 
-void PtrTest() {
-}
+void PtrTest() {}

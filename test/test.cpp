@@ -22,8 +22,8 @@ int main() {
   MemoryAllocatorTest();
   PtrTest();
   auto allocator = Paranoixa::CreateAllocator(0x4000);
-  StdAllocator<int> stdAllocator{allocator};
-  std::vector<int, StdAllocator<int>> vec({allocator});
+  STLAllocator<int> stdAllocator{allocator};
+  std::vector<int, STLAllocator<int>> vec({allocator});
   vec.push_back(1);
   {
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {

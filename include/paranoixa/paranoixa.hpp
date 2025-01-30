@@ -19,7 +19,7 @@ template <class T> using Ref = std::weak_ptr<T>;
 
 template <class T, class... Args>
 Ptr<T> MakePtr(AllocatorPtr allocator, Args &&...args) {
-  StdAllocator<T> stdAllocator{allocator};
+  STLAllocator<T> stdAllocator{allocator};
   return std::allocate_shared<T>(stdAllocator, std::forward<Args>(args)...);
 }
 template <class T, class U> Ptr<T> DownCast(Ptr<U> ptr) {
@@ -34,9 +34,9 @@ enum class GraphicsAPI {
   WebGPU,
   SDLGPU,
 };
-template <typename T> class Array : public std::vector<T, StdAllocator<T>> {
+template <typename T> class Array : public std::vector<T, STLAllocator<T>> {
 public:
-  Array(AllocatorPtr allocator) : std::vector<T, StdAllocator<T>>(allocator) {}
+  Array(AllocatorPtr allocator) : std::vector<T, STLAllocator<T>>(allocator) {}
 };
 class FileLoader {
 public:
