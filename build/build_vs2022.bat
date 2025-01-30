@@ -1,1 +1,1 @@
-cd msvc && msbuild paranoixa.sln /p:Configuration=Debug
+cd %~dp0msvc && msbuild paranoixa.sln /p:Configuration=Debug

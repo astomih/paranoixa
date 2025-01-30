@@ -1,0 +1,47 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		}
+	],
+	"settings": {},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"type": "lldb",
+				"request": "launch",
+				"name": "Launch",
+				"program": "${workspaceFolder}/build/clang/test/paranoixa_test",
+				"args": [],
+				"cwd": "${workspaceFolder}/test"
+			}
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "clang build",
+				"command": "${workspaceFolder}/build/build_clang.bat",
+				"problemMatcher": [],
+				"group": {
+					"kind": "build",
+					"isDefault": true
+				},
+			},
+			{
+				"label": "vs2022",
+				"type": "shell",
+				"command": "${workspaceFolder}/build/build_vs2022.bat",
+				"problemMatcher": [],
+				"group": {
+					"kind": "build",
+				},
+			}
+		],
+	},
+	"extensions": {
+		"recommendations": []
+	}
+}

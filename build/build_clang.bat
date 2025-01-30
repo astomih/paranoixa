@@ -1,1 +1,1 @@
-cd clang && ninja
+cd %~dp0clang && ninja
