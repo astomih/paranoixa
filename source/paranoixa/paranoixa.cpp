@@ -3,7 +3,9 @@
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
-#include "tlsf_allocator.hpp"
+
+#include "allocator/std_allocator.hpp"
+#include "allocator/tlsf_allocator.hpp"
 
 #include "d3d12u/d3d12u_renderer.hpp"
 #include "sdlgpu/sdlgpu_renderer.hpp"
@@ -77,7 +79,11 @@ Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
   return nullptr;
 }
 AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
+#ifdef _MSC_VER
   return MakeAllocatorPtr<TLSFAllocator>(size);
+#else
+  return MakeAllocatorPtr<StdAllocator>(size);
+#endif
 }
 Paranoixa::Paranoixa(const Desc &desc) : allocator(desc.allocator) {}
 void *Paranoixa::GetWindow() { return static_cast<void *>(window); }
