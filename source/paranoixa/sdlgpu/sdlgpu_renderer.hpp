@@ -41,24 +41,31 @@ private:
 };
 class SDLGPUTexture : public Texture {
 public:
-  SDLGPUTexture(const CreateInfo &createInfo, Device &device,
-                SDL_GPUTexture *texture)
-      : Texture(createInfo), texture(texture) {}
+  SDLGPUTexture(const CreateInfo &createInfo, SDLGPUDevice &device,
+                SDL_GPUTexture *texture, bool isSwapchainTexture = false)
+      : Texture(createInfo), device(device), texture(texture),
+        isSwapchainTexture(isSwapchainTexture) {}
   virtual ~SDLGPUTexture() override;
 
   inline SDL_GPUTexture *GetNative() const { return texture; }
 
 private:
+  SDLGPUDevice &device;
   SDL_GPUTexture *texture;
+  bool isSwapchainTexture;
 };
 
 class SDLGPUSampler : public Sampler {
 public:
-  SDLGPUSampler(const CreateInfo &createInfo, SDL_GPUSampler *sampler)
-      : Sampler(createInfo), sampler(sampler) {}
+  SDLGPUSampler(const CreateInfo &createInfo, SDLGPUDevice &device,
+                SDL_GPUSampler *sampler)
+      : Sampler(createInfo), device(device), sampler(sampler) {}
+  ~SDLGPUSampler() override;
+
   inline SDL_GPUSampler *GetNative() const { return sampler; }
 
 private:
+  SDLGPUDevice &device;
   SDL_GPUSampler *sampler;
 };
 
@@ -68,6 +75,7 @@ public:
                        SDL_GPUTransferBuffer *transferBuffer)
       : TransferBuffer(createInfo), device(device),
         transferBuffer(transferBuffer) {}
+  ~SDLGPUTransferBuffer() override;
 
   inline SDL_GPUTransferBuffer *GetNative() { return transferBuffer; }
 
@@ -80,12 +88,15 @@ private:
 };
 class SDLGPUBuffer : public Buffer {
 public:
-  SDLGPUBuffer(const CreateInfo &createInfo, SDL_GPUBuffer *buffer)
-      : Buffer(createInfo), buffer(buffer) {}
+  SDLGPUBuffer(const CreateInfo &createInfo, SDLGPUDevice &device,
+               SDL_GPUBuffer *buffer)
+      : Buffer(createInfo), device(device), buffer(buffer) {}
+  ~SDLGPUBuffer() override;
 
   inline SDL_GPUBuffer *GetNative() { return buffer; }
 
 private:
+  SDLGPUDevice &device;
   SDL_GPUBuffer *buffer;
 };
 class SDLGPUBackend : public Backend {
@@ -95,11 +106,15 @@ public:
 };
 class SDLGPUShader : public Shader {
 public:
-  SDLGPUShader(const CreateInfo &createInfo, SDL_GPUShader *shader)
-      : Shader(createInfo), shader(shader) {}
+  SDLGPUShader(const CreateInfo &createInfo, SDLGPUDevice &device,
+               SDL_GPUShader *shader)
+      : Shader(createInfo), device(device), shader(shader) {}
+  ~SDLGPUShader() override;
+
   inline SDL_GPUShader *GetNative() { return shader; }
 
 private:
+  SDLGPUDevice &device;
   SDL_GPUShader *shader;
 };
 

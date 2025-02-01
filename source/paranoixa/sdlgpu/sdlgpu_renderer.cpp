@@ -143,7 +143,11 @@ void SDLGPUCommandBuffer::EndRenderPass(Ptr<RenderPass> renderPass) {
 SDLGPUGraphicsPipeline::~SDLGPUGraphicsPipeline() {
   SDL_ReleaseGPUGraphicsPipeline(device.GetNative(), pipeline);
 }
-SDLGPUDevice::~SDLGPUDevice() { SDL_DestroyGPUDevice(device); }
+SDLGPUDevice::~SDLGPUDevice() {
+  if (window)
+    SDL_ReleaseWindowFromGPUDevice(device, window);
+  SDL_DestroyGPUDevice(device);
+}
 void SDLGPUDevice::ClaimWindow(void *window) {
   if (!SDL_ClaimWindowForGPUDevice(device, static_cast<SDL_Window *>(window))) {
     std::cout << "Failed to claim window for GPU device" << std::endl;
@@ -168,7 +172,7 @@ Ptr<Buffer> SDLGPUDevice::CreateBuffer(const Buffer::CreateInfo &createInfo) {
   bufferCI.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
   bufferCI.size = createInfo.size;
   SDL_GPUBuffer *buffer = SDL_CreateGPUBuffer(device, &bufferCI);
-  return MakePtr<SDLGPUBuffer>(createInfo.allocator, createInfo, buffer);
+  return MakePtr<SDLGPUBuffer>(createInfo.allocator, createInfo, *this, buffer);
 }
 
 Ptr<Texture>
@@ -185,7 +189,7 @@ SDLGPUDevice::CreateTexture(const Texture::CreateInfo &createInfo) {
 
   SDL_GPUTexture *texture = SDL_CreateGPUTexture(device, &textureCreateInfo);
   return MakePtr<SDLGPUTexture>(createInfo.allocator, createInfo, *this,
-                                texture);
+                                texture, false);
 }
 Ptr<Sampler>
 SDLGPUDevice::CreateSampler(const Sampler::CreateInfo &createInfo) {
@@ -198,7 +202,12 @@ SDLGPUDevice::CreateSampler(const Sampler::CreateInfo &createInfo) {
       .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
   };
   SDL_GPUSampler *sampler = SDL_CreateGPUSampler(device, &samplerCreateInfo);
-  return MakePtr<SDLGPUSampler>(createInfo.allocator, createInfo, sampler);
+  return MakePtr<SDLGPUSampler>(createInfo.allocator, createInfo, *this,
+                                sampler);
+}
+
+SDLGPUTransferBuffer::~SDLGPUTransferBuffer() {
+  SDL_ReleaseGPUTransferBuffer(device.GetNative(), transferBuffer);
 }
 
 void *SDLGPUTransferBuffer::Map() {
@@ -207,6 +216,10 @@ void *SDLGPUTransferBuffer::Map() {
 }
 void SDLGPUTransferBuffer::Unmap() {
   SDL_UnmapGPUTransferBuffer(device.GetNative(), this->transferBuffer);
+}
+
+SDLGPUBuffer::~SDLGPUBuffer() {
+  SDL_ReleaseGPUBuffer(device.GetNative(), buffer);
 }
 
 Ptr<Shader> SDLGPUDevice::CreateShader(const Shader::CreateInfo &createInfo) {
@@ -223,7 +236,7 @@ Ptr<Shader> SDLGPUDevice::CreateShader(const Shader::CreateInfo &createInfo) {
   shaderCI.num_uniform_buffers = createInfo.numUniformBuffers;
 
   auto *shader = SDL_CreateGPUShader(device, &shaderCI);
-  return MakePtr<SDLGPUShader>(createInfo.allocator, createInfo, shader);
+  return MakePtr<SDLGPUShader>(createInfo.allocator, createInfo, *this, shader);
 }
 Ptr<CommandBuffer>
 SDLGPUDevice::CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
@@ -326,10 +339,13 @@ SDLGPUDevice::AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) {
   SDLGPUTexture::CreateInfo ci{};
   ci.allocator = commandBuffer->GetCreateInfo().allocator;
   auto texture = MakePtr<SDLGPUTexture>(
-      commandBuffer->GetCreateInfo().allocator, ci, *this, nativeTex);
+      commandBuffer->GetCreateInfo().allocator, ci, *this, nativeTex, true);
   return texture;
 }
-SDLGPUTexture::~SDLGPUTexture() {}
+SDLGPUTexture::~SDLGPUTexture() {
+  if (!isSwapchainTexture)
+    SDL_ReleaseGPUTexture(device.GetNative(), texture);
+}
 
 void SDLGPURenderer::Initialize(void *window) {
 
@@ -549,5 +565,11 @@ void SDLGPURenderer::ProcessEvent(void *event) {}
 void SDLGPURenderer::BeginFrame() {}
 void SDLGPURenderer::EndFrame() {}
 void SDLGPURenderer::AddGuiUpdateCallBack(std::function<void()> callBack) {}
+SDLGPUShader::~SDLGPUShader() {
+  SDL_ReleaseGPUShader(device.GetNative(), shader);
+}
+SDLGPUSampler::~SDLGPUSampler() {
+  SDL_ReleaseGPUSampler(device.GetNative(), sampler);
+}
 } // namespace paranoixa
 #endif // EMSCRIPTEN
