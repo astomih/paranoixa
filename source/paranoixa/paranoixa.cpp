@@ -8,7 +8,7 @@
 #include "allocator/tlsf_allocator.hpp"
 
 #include "d3d12u/d3d12u_renderer.hpp"
-#include "sdlgpu/sdlgpu_renderer.hpp"
+#include "sdlgpu/sdlgpu_backend.hpp"
 #include "vulkan/vulkan_renderer.hpp"
 #include "webgpu/webgpu_renderer.hpp"
 
