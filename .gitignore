@@ -342,7 +342,7 @@ healthchecksdb
 # build
 [Ww]eb/
 *.dll
-build/msvc/*
-!build/msvc/.gitkeep
+build/vs2022/*
+!build/2022/.gitkeep
 build/clang/*
 !build/clang/.gitkeep

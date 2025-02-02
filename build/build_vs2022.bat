@@ -1,1 +1,3 @@
-cd %~dp0msvc && msbuild paranoixa.sln /p:Configuration=Debug
+cd %~dp0vs2022
+cmake ../..
+msbuild paranoixa.sln /p:Configuration=Debug

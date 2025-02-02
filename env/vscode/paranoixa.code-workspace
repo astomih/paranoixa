@@ -11,8 +11,16 @@
 			{
 				"type": "lldb",
 				"request": "launch",
-				"name": "Launch",
+				"name": "Launch clang",
 				"program": "${workspaceFolder}/build/clang/test/paranoixa_test",
+				"args": [],
+				"cwd": "${workspaceFolder}/test"
+			},
+			{
+				"type": "cppvsdbg",
+				"request": "launch",
+				"name": "Launch vs2022",
+				"program": "${workspaceFolder}/build/vs2022/test/debug/paranoixa_test",
 				"args": [],
 				"cwd": "${workspaceFolder}/test"
 			}
@@ -32,7 +40,6 @@
 			},
 			{
 				"label": "vs2022",
-				"type": "shell",
 				"command": "${workspaceFolder}/build/build_vs2022.bat",
 				"problemMatcher": [],
 				"group": {

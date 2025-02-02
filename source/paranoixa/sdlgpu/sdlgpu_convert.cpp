@@ -21,5 +21,40 @@ SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp) {
   }
   return SDL_GPU_STOREOP_STORE;
 }
+SDL_GPUCullMode CullModeFrom(CullMode cullMode) {
+  switch (cullMode) {
+  case CullMode::None:
+    return SDL_GPU_CULLMODE_NONE;
+  case CullMode::Front:
+    return SDL_GPU_CULLMODE_FRONT;
+  case CullMode::Back:
+    return SDL_GPU_CULLMODE_BACK;
+  }
+  return SDL_GPU_CULLMODE_NONE;
+}
+SDL_GPUFrontFace FrontFaceFrom(FrontFace frontFace) {
+  switch (frontFace) {
+  case FrontFace::Clockwise:
+    return SDL_GPU_FRONTFACE_CLOCKWISE;
+  case FrontFace::CounterClockwise:
+    return SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
+  }
+  return SDL_GPU_FRONTFACE_CLOCKWISE;
+}
+SDL_GPUPrimitiveType PrimitiveTypeFrom(PrimitiveType primitiveType) {
+  switch (primitiveType) {
+  case PrimitiveType::TriangleList:
+    return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+  case PrimitiveType::TriangleStrip:
+    return SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
+  case PrimitiveType::LineList:
+    return SDL_GPU_PRIMITIVETYPE_LINELIST;
+  case PrimitiveType::LineStrip:
+    return SDL_GPU_PRIMITIVETYPE_LINESTRIP;
+  case PrimitiveType::PointList:
+    return SDL_GPU_PRIMITIVETYPE_POINTLIST;
+  }
+  return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+}
 } // namespace convert
 } // namespace paranoixa

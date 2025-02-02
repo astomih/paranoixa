@@ -221,41 +221,6 @@ SDLGPUDevice::CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
                                       commandBuffer);
 }
 
-static SDL_GPUCullMode CullModeFrom(CullMode cullMode) {
-  switch (cullMode) {
-  case CullMode::None:
-    return SDL_GPU_CULLMODE_NONE;
-  case CullMode::Front:
-    return SDL_GPU_CULLMODE_FRONT;
-  case CullMode::Back:
-    return SDL_GPU_CULLMODE_BACK;
-  }
-  return SDL_GPU_CULLMODE_NONE;
-}
-static SDL_GPUFrontFace FrontFaceFrom(FrontFace frontFace) {
-  switch (frontFace) {
-  case FrontFace::Clockwise:
-    return SDL_GPU_FRONTFACE_CLOCKWISE;
-  case FrontFace::CounterClockwise:
-    return SDL_GPU_FRONTFACE_COUNTER_CLOCKWISE;
-  }
-  return SDL_GPU_FRONTFACE_CLOCKWISE;
-}
-static SDL_GPUPrimitiveType PrimitiveTypeFrom(PrimitiveType primitiveType) {
-  switch (primitiveType) {
-  case PrimitiveType::TriangleList:
-    return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-  case PrimitiveType::TriangleStrip:
-    return SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
-  case PrimitiveType::LineList:
-    return SDL_GPU_PRIMITIVETYPE_LINELIST;
-  case PrimitiveType::LineStrip:
-    return SDL_GPU_PRIMITIVETYPE_LINESTRIP;
-  case PrimitiveType::PointList:
-    return SDL_GPU_PRIMITIVETYPE_POINTLIST;
-  }
-  return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
-}
 Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
     const GraphicsPipeline::CreateInfo &createInfo) {
   SDL_GPUGraphicsPipelineCreateInfo pipelineCI = {};
@@ -264,10 +229,11 @@ Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
   pipelineCI.fragment_shader =
       DownCast<SDLGPUShader>(createInfo.fragmentShader)->GetNative();
   pipelineCI.rasterizer_state.cull_mode =
-      CullModeFrom(createInfo.rasterizerState.cullMode);
+      convert::CullModeFrom(createInfo.rasterizerState.cullMode);
   pipelineCI.rasterizer_state.front_face =
-      FrontFaceFrom(createInfo.rasterizerState.frontFace);
-  pipelineCI.primitive_type = PrimitiveTypeFrom(createInfo.primitiveType);
+      convert::FrontFaceFrom(createInfo.rasterizerState.frontFace);
+  pipelineCI.primitive_type =
+      convert::PrimitiveTypeFrom(createInfo.primitiveType);
   pipelineCI.target_info.num_color_targets =
       createInfo.targetInfo.numColorTargets;
   SDL_GPUColorTargetDescription colorTargetDesc{};
