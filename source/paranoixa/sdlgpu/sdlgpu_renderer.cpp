@@ -1,5 +1,6 @@
 #ifndef EMSCRIPTEN
 #include "sdlgpu_renderer.hpp"
+#include "sdlgpu_convert.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
@@ -98,28 +99,6 @@ Ptr<CopyPass> SDLGPUCommandBuffer::BeginCopyPass() {
 void SDLGPUCommandBuffer::EndCopyPass(Ptr<CopyPass> copyPass) {
   SDL_EndGPUCopyPass(DownCast<SDLGPUCopyPass>(copyPass)->GetNative());
 }
-namespace convert {
-SDL_GPULoadOp LoadOpFrom(LoadOp loadOp) {
-  switch (loadOp) {
-  case LoadOp::Clear:
-    return SDL_GPU_LOADOP_CLEAR;
-  case LoadOp::Load:
-    return SDL_GPU_LOADOP_LOAD;
-  case LoadOp::DontCare:
-    return SDL_GPU_LOADOP_DONT_CARE;
-  }
-  return SDL_GPU_LOADOP_LOAD;
-}
-SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp) {
-  switch (storeOp) {
-  case StoreOp::Store:
-    return SDL_GPU_STOREOP_STORE;
-  case StoreOp::DontCare:
-    return SDL_GPU_STOREOP_DONT_CARE;
-  }
-  return SDL_GPU_STOREOP_STORE;
-}
-} // namespace convert
 Ptr<RenderPass> SDLGPUCommandBuffer::BeginRenderPass(
     const Array<RenderPass::ColorTargetInfo> &infos) {
   Array<SDL_GPUColorTargetInfo> colorTargetInfos(GetCreateInfo().allocator);

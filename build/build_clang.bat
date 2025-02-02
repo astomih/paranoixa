@@ -1,1 +1,1 @@
-cd %~dp0clang && ninja
+cd %~dp0clang && cmake ../.. && ninja
