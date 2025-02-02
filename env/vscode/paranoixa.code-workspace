@@ -30,16 +30,16 @@
 		"version": "2.0.0",
 		"tasks": [
 			{
-				"label": "clang build",
+				"label": "clang",
 				"command": "${workspaceFolder}/build/build_clang.bat",
 				"problemMatcher": [],
 				"group": {
 					"kind": "build",
-					"isDefault": true
 				},
 			},
 			{
 				"label": "vs2022",
+				"type": "shell",
 				"command": "${workspaceFolder}/build/build_vs2022.bat",
 				"problemMatcher": [],
 				"group": {
