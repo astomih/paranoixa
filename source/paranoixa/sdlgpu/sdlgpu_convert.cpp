@@ -56,5 +56,14 @@ SDL_GPUPrimitiveType PrimitiveTypeFrom(PrimitiveType primitiveType) {
   }
   return SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 }
+SDL_GPUTextureFormat TextureFormatFrom(TextureFormat textureFormat) {
+  switch (textureFormat) {
+  case TextureFormat::R8G8B8A8_UNORM:
+    return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+  default:
+    return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
+    break;
+  }
+}
 } // namespace convert
 } // namespace paranoixa

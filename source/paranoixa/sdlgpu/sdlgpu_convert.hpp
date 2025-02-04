@@ -7,5 +7,6 @@ SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp);
 SDL_GPUCullMode CullModeFrom(CullMode cullMode);
 SDL_GPUFrontFace FrontFaceFrom(FrontFace frontFace);
 SDL_GPUPrimitiveType PrimitiveTypeFrom(PrimitiveType primitiveType);
+SDL_GPUTextureFormat TextureFormatFrom(TextureFormat textureFormat);
 } // namespace convert
 } // namespace paranoixa

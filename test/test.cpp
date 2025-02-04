@@ -36,9 +36,7 @@ int main() {
         SDL_CreateWindow("test", surface->w, surface->h, windowFlags);
     {
 
-      auto app =
-          Paranoixa({.allocator = allocator, .api = GraphicsAPI::SDLGPU});
-      auto backend = app.CreateBackend(GraphicsAPI::SDLGPU);
+      auto backend = Paranoixa::CreateBackend(allocator, GraphicsAPI::SDLGPU);
       auto device = backend->CreateDevice({allocator, true});
       device->ClaimWindow(window);
 

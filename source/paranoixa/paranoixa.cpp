@@ -48,13 +48,8 @@ bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
   }
   return false;
 }
-static SDL_Window *window = nullptr;
-static bool running = true;
-Paranoixa::~Paranoixa() {
-  SDL_DestroyWindow(window);
-  SDL_Quit();
-}
-Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
+Ptr<Backend> Paranoixa::CreateBackend(AllocatorPtr allocator,
+                                      const GraphicsAPI &api) {
 #ifndef __EMSCRIPTEN__
   switch (api) {
   case GraphicsAPI::Vulkan: {
@@ -84,30 +79,5 @@ AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
 #else
   return MakeAllocatorPtr<StdAllocator>(size);
 #endif
-}
-Paranoixa::Paranoixa(const Desc &desc) : allocator(desc.allocator) {}
-void *Paranoixa::GetWindow() { return static_cast<void *>(window); }
-void Paranoixa::Run() {
-#ifndef __EMSCRIPTEN__
-  while (this->IsRunning()) {
-    this->Loop();
-  }
-#else
-  emscripten_set_main_loop_arg(
-      [](void *userData) {
-        Paranoixa *app = reinterpret_cast<Paranoixa *>(userData);
-        app->Loop();
-      },
-      this, 0, 1);
-#endif // __EMSCRIPTEN__
-}
-bool Paranoixa::IsRunning() { return running; }
-void Paranoixa::Loop() {
-  SDL_Event event;
-  while (SDL_PollEvent(&event)) {
-    if (event.type == SDL_EVENT_QUIT) {
-      running = false;
-    }
-  }
 }
 } // namespace paranoixa

@@ -152,13 +152,13 @@ public:
   inline SDL_GPURenderPass *GetNative() const { return renderPass; }
 
   void BindGraphicsPipeline(Ptr<GraphicsPipeline> pipeline) override;
-  void BindVertexBuffers(uint32_t startSlot,
+  void BindVertexBuffers(uint32 startSlot,
                          const Array<BufferBinding> &bindings) override;
   void
-  BindFragmentSamplers(uint32_t startSlot,
+  BindFragmentSamplers(uint32 startSlot,
                        const Array<TextureSamplerBinding> &bindings) override;
-  void DrawPrimitives(uint32_t vertexCount, uint32_t instanceCount,
-                      uint32_t firstVertex, uint32_t firstInstance) override;
+  void DrawPrimitives(uint32 vertexCount, uint32 instanceCount,
+                      uint32 firstVertex, uint32 firstInstance) override;
 
 private:
   AllocatorPtr allocator;

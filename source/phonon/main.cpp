@@ -142,7 +142,6 @@ int main() {
   vec.push_back(1);
   {
 
-    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::Vulkan});
     SDL_AudioSpec desiredSpec;
     desiredSpec.freq = 44100;           // サンプルレート
     desiredSpec.format = SDL_AUDIO_F32; // 32ビットのオーディオフォーマット
@@ -202,7 +201,6 @@ int main() {
       }
       ImGui::End();
     });
-    app.Run();
   }
   return 0;
 }

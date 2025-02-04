@@ -23,8 +23,9 @@ void SDLGPUCopyPass::UploadTexture(const TextureTransferInfo &src,
   };
   SDL_GPUTextureRegion region = {
       .texture = DownCast<SDLGPUTexture>(dst.texture)->GetNative(),
-      .x = 0,
-      .y = 0,
+      .x = dst.x,
+      .y = dst.y,
+      .z = dst.z,
       .w = dst.width,
       .h = dst.height,
       .d = dst.depth,
@@ -54,7 +55,7 @@ void SDLGPURenderPass::BindGraphicsPipeline(Ptr<GraphicsPipeline> pipeline) {
       this->renderPass,
       DownCast<SDLGPUGraphicsPipeline>(pipeline)->GetNative());
 }
-void SDLGPURenderPass::BindVertexBuffers(uint32_t startSlot,
+void SDLGPURenderPass::BindVertexBuffers(uint32 startSlot,
                                          const Array<BufferBinding> &bindings) {
   Array<SDL_GPUBufferBinding> bufferBindings(allocator);
   bufferBindings.resize(bindings.size());
@@ -68,7 +69,7 @@ void SDLGPURenderPass::BindVertexBuffers(uint32_t startSlot,
                            bufferBindings.size());
 }
 void SDLGPURenderPass::BindFragmentSamplers(
-    uint32_t startSlot, const Array<TextureSamplerBinding> &bindings) {
+    uint32 startSlot, const Array<TextureSamplerBinding> &bindings) {
   Array<SDL_GPUTextureSamplerBinding> samplerBindings(allocator);
   samplerBindings.resize(bindings.size());
   for (int i = 0; i < samplerBindings.size(); ++i) {
@@ -81,10 +82,9 @@ void SDLGPURenderPass::BindFragmentSamplers(
   SDL_BindGPUFragmentSamplers(this->renderPass, startSlot,
                               samplerBindings.data(), samplerBindings.size());
 }
-void SDLGPURenderPass::DrawPrimitives(uint32_t vertexCount,
-                                      uint32_t instanceCount,
-                                      uint32_t firstVertex,
-                                      uint32_t firstInstance) {
+void SDLGPURenderPass::DrawPrimitives(uint32 vertexCount, uint32 instanceCount,
+                                      uint32 firstVertex,
+                                      uint32 firstInstance) {
   SDL_DrawGPUPrimitives(this->renderPass, vertexCount, instanceCount,
                         firstVertex, firstInstance);
 }
@@ -236,11 +236,17 @@ Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
       convert::PrimitiveTypeFrom(createInfo.primitiveType);
   pipelineCI.target_info.num_color_targets =
       createInfo.targetInfo.numColorTargets;
-  SDL_GPUColorTargetDescription colorTargetDesc{};
-  colorTargetDesc.format = SDL_GetGPUSwapchainTextureFormat(
-      device, static_cast<SDL_Window *>(window));
-  SDL_GPUColorTargetDescription colorTargetDescs[] = {colorTargetDesc};
-  pipelineCI.target_info.color_target_descriptions = colorTargetDescs;
+
+  Array<SDL_GPUColorTargetDescription> colorTargetDescs(createInfo.allocator);
+  colorTargetDescs.resize(createInfo.targetInfo.numColorTargets);
+  for (int i = 0; i < createInfo.targetInfo.numColorTargets; ++i) {
+    SDL_GPUColorTargetDescription colorTargetDesc{};
+    colorTargetDesc.format = convert::TextureFormatFrom(
+        createInfo.targetInfo.colorTargetDescriptions[i].format);
+    colorTargetDescs[i] = colorTargetDesc;
+  }
+  pipelineCI.target_info.color_target_descriptions = colorTargetDescs.data();
+  pipelineCI.target_info.num_color_targets = colorTargetDescs.size();
   pipelineCI.vertex_input_state.num_vertex_attributes = 3;
   pipelineCI.vertex_input_state.num_vertex_buffers = 1;
   SDL_GPUVertexAttribute vertexAttributes[] = {
