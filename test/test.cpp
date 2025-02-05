@@ -181,28 +181,31 @@ int main() {
       vbDesc.instanceStepRate = 0;
       vbDesc.pitch = sizeof(float) * 8;
       vbDesc.slot = 0;
+      Array<VertexBufferDescription> vbDescs(allocator);
+      vbDescs.push_back(vbDesc);
 
-      VertexAttribute vertexAttributes[] = {
-          {0, 0, VertexElementFormat::Float3, 0},
-          {1, 0, VertexElementFormat::Float2, sizeof(float) * 3},
-          {2, 0, VertexElementFormat::Float3, sizeof(float) * 5},
+      Array<VertexAttribute> vertexAttributes(allocator);
+      {
+        vertexAttributes.push_back({0, 0, VertexElementFormat::Float3, 0});
+        vertexAttributes.push_back(
+            {1, 0, VertexElementFormat::Float2, sizeof(float) * 3});
+        vertexAttributes.push_back(
+            {2, 0, VertexElementFormat::Float3, sizeof(float) * 5});
       };
       ColorTargetDescription colorTargetDescription = {
           .format = TextureFormat::R8G8B8A8_UNORM,
           .blendState = ColorTargetBlendState{},
       };
-      ColorTargetDescription colorTargetDescriptions[] = {
-          colorTargetDescription};
+      Array<ColorTargetDescription> colorTargetDescriptions(allocator);
+      colorTargetDescriptions.push_back(colorTargetDescription);
       GraphicsPipeline::CreateInfo pipelineCreateInfo = {
           .allocator = allocator,
           .vertexShader = vs,
           .fragmentShader = fs,
           .vertexInputState =
               VertexInputState{
-                  .vertexBufferDescriptions = &vbDesc,
-                  .numVertexBuffers = 1,
+                  .vertexBufferDescriptions = vbDescs,
                   .vertexAttributes = vertexAttributes,
-                  .numVertexAttributes = _countof(vertexAttributes),
               },
           .primitiveType = PrimitiveType::TriangleList,
           .rasterizerState =
@@ -215,9 +218,7 @@ int main() {
           .depthStencilState = {},
           .targetInfo =
               TargetInfo{
-
                   .colorTargetDescriptions = colorTargetDescriptions,
-                  .numColorTargets = _countof(colorTargetDescriptions),
               },
       };
       auto pipeline = device->CreateGraphicsPipeline(pipelineCreateInfo);

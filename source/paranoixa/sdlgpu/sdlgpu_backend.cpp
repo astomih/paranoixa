@@ -234,12 +234,13 @@ Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
       convert::FrontFaceFrom(createInfo.rasterizerState.frontFace);
   pipelineCI.primitive_type =
       convert::PrimitiveTypeFrom(createInfo.primitiveType);
-  pipelineCI.target_info.num_color_targets =
-      createInfo.targetInfo.numColorTargets;
+
+  auto numColorTargets = createInfo.targetInfo.colorTargetDescriptions.size();
+  pipelineCI.target_info.num_color_targets = numColorTargets;
 
   Array<SDL_GPUColorTargetDescription> colorTargetDescs(createInfo.allocator);
-  colorTargetDescs.resize(createInfo.targetInfo.numColorTargets);
-  for (int i = 0; i < createInfo.targetInfo.numColorTargets; ++i) {
+  colorTargetDescs.resize(numColorTargets);
+  for (int i = 0; i < numColorTargets; ++i) {
     SDL_GPUColorTargetDescription colorTargetDesc{};
     colorTargetDesc.format = convert::TextureFormatFrom(
         createInfo.targetInfo.colorTargetDescriptions[i].format);
@@ -247,21 +248,37 @@ Ptr<GraphicsPipeline> SDLGPUDevice::CreateGraphicsPipeline(
   }
   pipelineCI.target_info.color_target_descriptions = colorTargetDescs.data();
   pipelineCI.target_info.num_color_targets = colorTargetDescs.size();
-  pipelineCI.vertex_input_state.num_vertex_attributes = 3;
-  pipelineCI.vertex_input_state.num_vertex_buffers = 1;
-  SDL_GPUVertexAttribute vertexAttributes[] = {
-      {0, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 0},
-      {1, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, sizeof(float) * 3},
-      {2, 0, SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, sizeof(float) * 5},
-  };
-  pipelineCI.vertex_input_state.vertex_attributes = vertexAttributes;
-  SDL_GPUVertexBufferDescription vbDesc = {};
-  vbDesc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-  vbDesc.instance_step_rate = 0;
-  vbDesc.pitch = sizeof(float) * 8;
-  vbDesc.slot = 0;
-  SDL_GPUVertexBufferDescription vbDescs[] = {vbDesc};
-  pipelineCI.vertex_input_state.vertex_buffer_descriptions = vbDescs;
+  pipelineCI.vertex_input_state.num_vertex_attributes =
+      createInfo.vertexInputState.vertexAttributes.size();
+  pipelineCI.vertex_input_state.num_vertex_buffers =
+      createInfo.vertexInputState.vertexBufferDescriptions.size();
+  Array<SDL_GPUVertexAttribute> vertexAttributes(createInfo.allocator);
+  for (int i = 0; i < createInfo.vertexInputState.vertexAttributes.size();
+       ++i) {
+    SDL_GPUVertexAttribute vertexAttribute = {};
+    vertexAttribute.location =
+        createInfo.vertexInputState.vertexAttributes[i].location;
+    vertexAttribute.buffer_slot =
+        createInfo.vertexInputState.vertexAttributes[i].bufferSlot;
+    vertexAttribute.format = convert::VertexElementFormatFrom(
+        createInfo.vertexInputState.vertexAttributes[i].format);
+    vertexAttribute.offset =
+        createInfo.vertexInputState.vertexAttributes[i].offset;
+    vertexAttributes.push_back(vertexAttribute);
+  }
+  pipelineCI.vertex_input_state.vertex_attributes = vertexAttributes.data();
+  Array<SDL_GPUVertexBufferDescription> vbDescs(createInfo.allocator);
+  for (int i = 0;
+       i < createInfo.vertexInputState.vertexBufferDescriptions.size(); i++) {
+    auto &desc = createInfo.vertexInputState.vertexBufferDescriptions[i];
+    SDL_GPUVertexBufferDescription vbDesc = {};
+    vbDesc.input_rate = convert::VertexInputRateFrom(desc.inputRate);
+    vbDesc.instance_step_rate = desc.instanceStepRate;
+    vbDesc.pitch = desc.pitch;
+    vbDesc.slot = desc.slot;
+    vbDescs.push_back(vbDesc);
+  }
+  pipelineCI.vertex_input_state.vertex_buffer_descriptions = vbDescs.data();
 
   auto *pipeline = SDL_CreateGPUGraphicsPipeline(device, &pipelineCI);
   return MakePtr<SDLGPUGraphicsPipeline>(createInfo.allocator, createInfo,

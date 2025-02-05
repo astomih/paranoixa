@@ -65,5 +65,31 @@ SDL_GPUTextureFormat TextureFormatFrom(TextureFormat textureFormat) {
     break;
   }
 }
+SDL_GPUVertexElementFormat VertexElementFormatFrom(VertexElementFormat format) {
+  switch (format) {
+  case VertexElementFormat::Float1:
+    return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
+  case VertexElementFormat::Float2:
+    return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2;
+  case VertexElementFormat::Float3:
+    return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+  case VertexElementFormat::Float4:
+    return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+  default:
+    return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
+  }
+}
+SDL_GPUVertexInputRate VertexInputRateFrom(VertexInputRate vertexInputRate) {
+  switch (vertexInputRate) {
+    {
+    case VertexInputRate::Vertex:
+      return SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    case VertexInputRate::Instance:
+      return SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+    default:
+      return SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    }
+  }
+}
 } // namespace convert
 } // namespace paranoixa

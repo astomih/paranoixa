@@ -76,10 +76,8 @@ struct VertexAttribute {
   uint32 offset;
 };
 struct VertexInputState {
-  const VertexBufferDescription *vertexBufferDescriptions;
-  uint32 numVertexBuffers;
-  const VertexAttribute *vertexAttributes;
-  uint32 numVertexAttributes;
+  Array<VertexBufferDescription> vertexBufferDescriptions;
+  Array<VertexAttribute> vertexAttributes;
 };
 enum class PrimitiveType {
   TriangleList,
@@ -164,9 +162,7 @@ struct ColorTargetDescription {
   ColorTargetBlendState blendState;
 };
 struct TargetInfo {
-  const ColorTargetDescription *colorTargetDescriptions;
-  uint32 numColorTargets;
-  const TextureFormat *colorTargetFormats;
+  Array<ColorTargetDescription> colorTargetDescriptions;
   const TextureFormat *depthStencilTargetFormat;
   bool hasDepthStencilTarget;
 };
