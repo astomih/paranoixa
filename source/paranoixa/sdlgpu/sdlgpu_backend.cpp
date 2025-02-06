@@ -130,7 +130,8 @@ void Device::ClaimWindow(void *window) {
 Ptr<px::TransferBuffer>
 Device::CreateTransferBuffer(const TransferBuffer::CreateInfo &createInfo) {
   SDL_GPUTransferBufferCreateInfo stagingTextureBufferCI{};
-  stagingTextureBufferCI.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+  stagingTextureBufferCI.usage =
+      convert::TransferBufferUsageFrom(createInfo.usage);
   stagingTextureBufferCI.size = createInfo.size;
 
   SDL_GPUTransferBuffer *stagingTextureBuffer =
@@ -141,7 +142,7 @@ Device::CreateTransferBuffer(const TransferBuffer::CreateInfo &createInfo) {
 
 Ptr<px::Buffer> Device::CreateBuffer(const Buffer::CreateInfo &createInfo) {
   SDL_GPUBufferCreateInfo bufferCI{};
-  bufferCI.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+  bufferCI.usage = convert::BufferUsageFrom(createInfo.usage);
   bufferCI.size = createInfo.size;
   SDL_GPUBuffer *buffer = SDL_CreateGPUBuffer(device, &bufferCI);
   return MakePtr<Buffer>(createInfo.allocator, createInfo, *this, buffer);
@@ -149,14 +150,15 @@ Ptr<px::Buffer> Device::CreateBuffer(const Buffer::CreateInfo &createInfo) {
 
 Ptr<px::Texture> Device::CreateTexture(const Texture::CreateInfo &createInfo) {
   SDL_GPUTextureCreateInfo textureCreateInfo = {
-      .type = SDL_GPU_TEXTURETYPE_2D,
-      .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-      .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+      .type = convert::TextureTypeFrom(createInfo.type),
+      .format = convert::TextureFormatFrom(createInfo.format),
+      .usage = convert::TextureUsageFrom(createInfo.usage),
       .width = createInfo.width,
       .height = createInfo.height,
       .layer_count_or_depth = createInfo.layerCountOrDepth,
       .num_levels = createInfo.numLevels,
-      .sample_count = SDL_GPU_SAMPLECOUNT_1};
+      .sample_count = convert::SampleCountFrom(createInfo.sampleCount),
+  };
 
   SDL_GPUTexture *texture = SDL_CreateGPUTexture(device, &textureCreateInfo);
   return MakePtr<Texture>(createInfo.allocator, createInfo, *this, texture,
@@ -164,12 +166,12 @@ Ptr<px::Texture> Device::CreateTexture(const Texture::CreateInfo &createInfo) {
 }
 Ptr<px::Sampler> Device::CreateSampler(const Sampler::CreateInfo &createInfo) {
   SDL_GPUSamplerCreateInfo samplerCreateInfo = {
-      .min_filter = SDL_GPU_FILTER_LINEAR,
-      .mag_filter = SDL_GPU_FILTER_LINEAR,
-      .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST,
-      .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-      .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
-      .address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+      .min_filter = convert::FilterFrom(createInfo.minFilter),
+      .mag_filter = convert::FilterFrom(createInfo.magFilter),
+      .mipmap_mode = convert::MipmapModeFrom(createInfo.mipmapMode),
+      .address_mode_u = convert::AddressModeFrom(createInfo.addressModeU),
+      .address_mode_v = convert::AddressModeFrom(createInfo.addressModeV),
+      .address_mode_w = convert::AddressModeFrom(createInfo.addressModeW),
   };
   SDL_GPUSampler *sampler = SDL_CreateGPUSampler(device, &samplerCreateInfo);
   return MakePtr<Sampler>(createInfo.allocator, createInfo, *this, sampler);

@@ -193,7 +193,7 @@ int main() {
             {2, 0, VertexElementFormat::Float3, sizeof(float) * 5});
       };
       ColorTargetDescription colorTargetDescription = {
-          .format = TextureFormat::R8G8B8A8_UNORM,
+          .format = TextureFormat::B8G8R8A8_UNORM,
           .blendState = ColorTargetBlendState{},
       };
       Array<ColorTargetDescription> colorTargetDescriptions(allocator);
