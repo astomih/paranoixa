@@ -3,7 +3,7 @@
 
 # Relative path conversion top directories.
 set(CMAKE_RELATIVE_PATH_TOP_SOURCE "/home/runner/work/paranoixa/paranoixa")
-set(CMAKE_RELATIVE_PATH_TOP_BINARY "/home/runner/work/paranoixa/paranoixa/build")
+set(CMAKE_RELATIVE_PATH_TOP_BINARY "/home/runner/work/paranoixa/paranoixa/build/emscripten")
 
 # Force unix paths in dependencies.
 set(CMAKE_FORCE_UNIX_PATHS 1)
