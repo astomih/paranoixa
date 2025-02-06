@@ -33,7 +33,25 @@ void CopyPass::UploadTexture(const TextureTransferInfo &src,
   SDL_UploadToGPUTexture(this->copyPass, &transferInfo, &region, cycle);
 }
 void CopyPass::DownloadTexture(const TextureRegion &src,
-                               const TextureTransferInfo &dst, bool cycle) {}
+                               const TextureTransferInfo &dst) {
+
+  SDL_GPUTextureTransferInfo transferInfo = {
+      .transfer_buffer =
+          DownCast<TransferBuffer>(dst.transferBuffer)->GetNative(),
+      .offset = dst.offset,
+  };
+  SDL_GPUTextureRegion region = {
+
+      .texture = DownCast<Texture>(src.texture)->GetNative(),
+      .x = src.x,
+      .y = src.y,
+      .z = src.z,
+      .w = src.width,
+      .h = src.height,
+      .d = src.depth,
+  };
+  SDL_DownloadFromGPUTexture(this->copyPass, &region, &transferInfo);
+}
 void CopyPass::UploadBuffer(const BufferTransferInfo &src,
                             const BufferRegion &dst, bool cycle) {
   SDL_GPUTransferBufferLocation transferInfo = {
@@ -47,7 +65,18 @@ void CopyPass::UploadBuffer(const BufferTransferInfo &src,
   SDL_UploadToGPUBuffer(this->copyPass, &transferInfo, &region, cycle);
 }
 void CopyPass::DownloadBuffer(const BufferRegion &src,
-                              const BufferTransferInfo &dst, bool cycle) {}
+                              const BufferTransferInfo &dst) {
+  SDL_GPUBufferRegion region = {.buffer =
+                                    DownCast<Buffer>(src.buffer)->GetNative(),
+                                .offset = src.offset,
+                                .size = src.size};
+  SDL_GPUTransferBufferLocation transferInfo = {
+      .transfer_buffer =
+          DownCast<TransferBuffer>(dst.transferBuffer)->GetNative(),
+      .offset = dst.offset,
+  };
+  SDL_DownloadFromGPUBuffer(this->copyPass, &region, &transferInfo);
+}
 void RenderPass::BindGraphicsPipeline(Ptr<px::GraphicsPipeline> pipeline) {
   SDL_BindGPUGraphicsPipeline(
       this->renderPass, DownCast<GraphicsPipeline>(pipeline)->GetNative());

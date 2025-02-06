@@ -336,11 +336,11 @@ public:
   virtual void UploadTexture(const TextureTransferInfo &src,
                              const TextureRegion &dst, bool cycle) = 0;
   virtual void DownloadTexture(const TextureRegion &src,
-                               const TextureTransferInfo &dst, bool cycle) = 0;
+                               const TextureTransferInfo &dst) = 0;
   virtual void UploadBuffer(const BufferTransferInfo &src,
                             const BufferRegion &dst, bool cycle) = 0;
   virtual void DownloadBuffer(const BufferRegion &src,
-                              const BufferTransferInfo &dst, bool cycle) = 0;
+                              const BufferTransferInfo &dst) = 0;
 };
 class RenderPass {
 public:

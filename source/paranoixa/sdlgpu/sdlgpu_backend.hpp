@@ -127,13 +127,11 @@ public:
   virtual void UploadTexture(const TextureTransferInfo &src,
                              const TextureRegion &dst, bool cycle) override;
   virtual void DownloadTexture(const TextureRegion &src,
-                               const TextureTransferInfo &dst,
-                               bool cycle) override;
+                               const TextureTransferInfo &dst) override;
   virtual void UploadBuffer(const BufferTransferInfo &src,
                             const BufferRegion &dst, bool cycle) override;
   virtual void DownloadBuffer(const BufferRegion &src,
-                              const BufferTransferInfo &dst,
-                              bool cycle) override;
+                              const BufferTransferInfo &dst) override;
 
 private:
   SDL_GPUCopyPass *copyPass;
