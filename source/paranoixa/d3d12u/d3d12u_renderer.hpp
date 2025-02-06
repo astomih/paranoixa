@@ -10,16 +10,16 @@
 #include <dxgi1_6.h>
 
 namespace paranoixa {
-class D3d12uRenderer : public Renderer {
+class D3d12uRenderer {
 public:
   D3d12uRenderer(AllocatorPtr allcator);
-  ~D3d12uRenderer() override;
-  void Initialize(void *window) override;
-  void ProcessEvent(void *event) override;
-  void BeginFrame() override;
-  void EndFrame() override;
+  ~D3d12uRenderer();
+  void Initialize(void *window);
+  void ProcessEvent(void *event);
+  void BeginFrame();
+  void EndFrame();
 
-  void AddGuiUpdateCallBack(std::function<void()> callBack) override;
+  void AddGuiUpdateCallBack(std::function<void()> callBack);
 
 public:
   struct DescriptorHandle {

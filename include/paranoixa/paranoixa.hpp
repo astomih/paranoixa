@@ -1,42 +1,21 @@
 #ifndef PARANOIXA_HPP
 #define PARANOIXA_HPP
 #include "allocator.hpp"
+#include "define.hpp"
 #include <cassert>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <print>
 
-#ifdef _DEBUG
-#define PARANOIXA_BUILD_DEBUG
-#elif NDEBUG
-#define PARANOIXA_BUILD_RELEASE
-#endif
-
 namespace paranoixa {
-template <class T> using Ptr = std::shared_ptr<T>;
-template <class T> using Ref = std::weak_ptr<T>;
-
-template <class T, class... Args>
-Ptr<T> MakePtr(AllocatorPtr allocator, Args &&...args) {
-  StdAllocator<T> stdAllocator{allocator};
-  return std::allocate_shared<T>(stdAllocator, std::forward<Args>(args)...);
-}
-template <class T, class U> Ptr<T> DownCast(Ptr<U> ptr) {
-  return std::static_pointer_cast<T>(ptr);
-}
-
 enum class GraphicsAPI {
   Vulkan,
-#ifdef _WIN32
+#ifdef PARANOIXA_PLATFORM_WINDOWS
   D3D12U,
 #endif
   WebGPU,
   SDLGPU,
-};
-template <typename T> class Array : public std::vector<T, StdAllocator<T>> {
-public:
-  Array(AllocatorPtr allocator) : std::vector<T, StdAllocator<T>>(allocator) {}
 };
 class FileLoader {
 public:
@@ -48,10 +27,10 @@ std::unique_ptr<FileLoader> &GetFileLoader();
 
 enum class ShaderStage { Vertex, Fragment };
 enum class TransferBufferUsage { Upload, Download };
-enum class TextureFormat { R8G8B8A8_UNORM };
+enum class TextureFormat { R8G8B8A8_UNORM, B8G8R8A8_UNORM };
 enum class TextureUsage { Sampler, ColorTarget, DepthStencilTarget };
 enum class TextureType { Texture2D, Texture3D };
-enum class BufferUsage { Vertex, Index, Uniform };
+enum class BufferUsage { Vertex, Index, Indirect };
 enum class SampleCount {
   x1,
   x2,
@@ -77,10 +56,10 @@ enum VertexInputRate {
   Instance,
 };
 struct VertexBufferDescription {
-  uint32_t slot;
-  uint32_t pitch;
+  uint32 slot;
+  uint32 pitch;
   VertexInputRate inputRate;
-  uint32_t instanceStepRate;
+  uint32 instanceStepRate;
 };
 enum VertexElementFormat {
   Float1,
@@ -91,16 +70,14 @@ enum VertexElementFormat {
 enum class LoadOp { Load, Clear, DontCare };
 enum class StoreOp { Store, DontCare };
 struct VertexAttribute {
-  uint32_t location;
-  uint32_t bufferSlot;
+  uint32 location;
+  uint32 bufferSlot;
   VertexElementFormat format;
-  uint32_t offset;
+  uint32 offset;
 };
 struct VertexInputState {
-  const VertexBufferDescription *vertexBufferDescriptions;
-  uint32_t numVertexBuffers;
-  const VertexAttribute *vertexAttributes;
-  uint32_t numVertexAttributes;
+  Array<VertexBufferDescription> vertexBufferDescriptions;
+  Array<VertexAttribute> vertexAttributes;
 };
 enum class PrimitiveType {
   TriangleList,
@@ -158,7 +135,7 @@ struct RasterizerState {
 };
 struct MultiSampleState {
   SampleCount sampleCount;
-  uint32_t sampleMask;
+  uint32 sampleMask;
   bool enableMask;
 };
 struct DepthStencilState {
@@ -166,8 +143,8 @@ struct DepthStencilState {
   bool enableDepthTest;
   bool enableDepthWrite;
   bool enableStencilTest;
-  uint32_t stencilReadMask;
-  uint32_t stencilWriteMask;
+  uint32 stencilReadMask;
+  uint32 stencilWriteMask;
 };
 struct ColorTargetBlendState {
   BlendFactor srcColorBlendFactor;
@@ -185,9 +162,7 @@ struct ColorTargetDescription {
   ColorTargetBlendState blendState;
 };
 struct TargetInfo {
-  const ColorTargetDescription *colorTargetDescriptions;
-  uint32_t numColorTargets;
-  const TextureFormat *colorTargetFormats;
+  Array<ColorTargetDescription> colorTargetDescriptions;
   const TextureFormat *depthStencilTargetFormat;
   bool hasDepthStencilTarget;
 };
@@ -199,10 +174,10 @@ public:
     TextureType type;
     TextureFormat format;
     TextureUsage usage;
-    uint32_t width;
-    uint32_t height;
-    uint32_t layerCountOrDepth;
-    uint32_t numLevels;
+    uint32 width;
+    uint32 height;
+    uint32 layerCountOrDepth;
+    uint32 numLevels;
     SampleCount sampleCount;
   };
   virtual ~Texture() = default;
@@ -244,7 +219,7 @@ public:
   struct CreateInfo {
     AllocatorPtr allocator;
     BufferUsage usage;
-    uint32_t size;
+    uint32 size;
   };
   virtual ~Buffer() = default;
 
@@ -260,7 +235,7 @@ public:
   struct CreateInfo {
     AllocatorPtr allocator;
     TransferBufferUsage usage;
-    uint32_t size;
+    uint32 size;
   };
   virtual ~TransferBuffer() = default;
 
@@ -284,9 +259,9 @@ public:
     const void *data;
     const char *entrypoint;
     ShaderStage stage;
-    uint32_t numSamplers;
-    uint32_t numStorageTextures;
-    uint32_t numUniformBuffers;
+    uint32 numSamplers;
+    uint32 numStorageTextures;
+    uint32 numUniformBuffers;
   };
   virtual ~Shader() = default;
 
@@ -338,33 +313,34 @@ class CopyPass {
 public:
   struct TextureTransferInfo {
     Ptr<TransferBuffer> transferBuffer;
-    uint32_t offset;
+    uint32 offset;
   };
   struct TextureRegion {
     Ptr<Texture> texture;
-    uint32_t width;
-    uint32_t height;
-    uint32_t depth;
+    uint32 x, y, z;
+    uint32 width;
+    uint32 height;
+    uint32 depth;
   };
   struct BufferTransferInfo {
     Ptr<TransferBuffer> transferBuffer;
-    uint32_t offset;
+    uint32 offset;
   };
   struct BufferRegion {
     Ptr<Buffer> buffer;
-    uint32_t offset;
-    uint32_t size;
+    uint32 offset;
+    uint32 size;
   };
   virtual ~CopyPass() = default;
 
   virtual void UploadTexture(const TextureTransferInfo &src,
                              const TextureRegion &dst, bool cycle) = 0;
   virtual void DownloadTexture(const TextureRegion &src,
-                               const TextureTransferInfo &dst, bool cycle) = 0;
+                               const TextureTransferInfo &dst) = 0;
   virtual void UploadBuffer(const BufferTransferInfo &src,
                             const BufferRegion &dst, bool cycle) = 0;
   virtual void DownloadBuffer(const BufferRegion &src,
-                              const BufferTransferInfo &dst, bool cycle) = 0;
+                              const BufferTransferInfo &dst) = 0;
 };
 class RenderPass {
 public:
@@ -376,7 +352,7 @@ public:
   };
   struct BufferBinding {
     Ptr<Buffer> buffer;
-    uint32_t offset;
+    uint32 offset;
   };
   struct TextureSamplerBinding {
     Ptr<Sampler> sampler;
@@ -385,13 +361,13 @@ public:
   virtual ~RenderPass() = default;
 
   virtual void BindGraphicsPipeline(Ptr<GraphicsPipeline> graphicsPipeline) = 0;
-  virtual void BindVertexBuffers(uint32_t slot,
+  virtual void BindVertexBuffers(uint32 slot,
                                  const Array<BufferBinding> &bindings) = 0;
   virtual void
-  BindFragmentSamplers(uint32_t slot,
+  BindFragmentSamplers(uint32 slot,
                        const Array<TextureSamplerBinding> &bindings) = 0;
-  virtual void DrawPrimitives(uint32_t numVertices, uint32_t numInstances,
-                              uint32_t firstVertex, uint32_t firstInstance) = 0;
+  virtual void DrawPrimitives(uint32 numVertices, uint32 numInstances,
+                              uint32 firstVertex, uint32 firstInstance) = 0;
 
 protected:
   RenderPass() = default;
@@ -429,6 +405,11 @@ public:
   Device(const CreateInfo &createInfo) : createInfo(createInfo) {}
   virtual ~Device() = default;
   const CreateInfo &GetCreateInfo() const { return createInfo; }
+
+  /**
+   * @brief Claim the SDL_Window for the device
+   * @param window SDL_Window pointer
+   */
   virtual void ClaimWindow(void *window) = 0;
   virtual Ptr<Buffer> CreateBuffer(const Buffer::CreateInfo &createInfo) = 0;
   virtual Ptr<Texture> CreateTexture(const Texture::CreateInfo &createInfo) = 0;
@@ -450,20 +431,6 @@ private:
   CreateInfo createInfo;
 };
 
-class Renderer {
-public:
-  Renderer() = default;
-  virtual ~Renderer() { std::cout << "Renderer::~Renderer()" << std::endl; };
-
-  virtual void Initialize(void *window) = 0;
-  virtual void ProcessEvent(void *event) = 0;
-
-  virtual void BeginFrame() = 0;
-  virtual void EndFrame() = 0;
-
-  virtual void AddGuiUpdateCallBack(std::function<void()> callBack) = 0;
-};
-
 class Backend {
 public:
   Backend() = default;
@@ -473,23 +440,9 @@ public:
 
 class Paranoixa {
 public:
-  struct Desc {
-    AllocatorPtr allocator;
-    GraphicsAPI api;
-  };
-
-  Paranoixa(const Desc &desc);
-  ~Paranoixa();
-  Ptr<Backend> CreateBackend(const GraphicsAPI &api);
+  static Ptr<Backend> CreateBackend(AllocatorPtr allocator,
+                                    const GraphicsAPI &api);
   static AllocatorPtr CreateAllocator(size_t size);
-  void *GetWindow();
-
-  void Run();
-
-private:
-  bool IsRunning();
-  void Loop();
-  AllocatorPtr allocator;
 };
 } // namespace paranoixa
 #endif

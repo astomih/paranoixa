@@ -13,7 +13,7 @@ add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
 unset(CMAKE_FOLDER)
 
 if(NOT MSVC)
-  set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+  set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -D_DEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 endif()
 

@@ -22,8 +22,8 @@ int main() {
   MemoryAllocatorTest();
   PtrTest();
   auto allocator = Paranoixa::CreateAllocator(0x4000);
-  StdAllocator<int> stdAllocator{allocator};
-  std::vector<int, StdAllocator<int>> vec({allocator});
+  STLAllocator<int> stdAllocator{allocator};
+  std::vector<int, STLAllocator<int>> vec({allocator});
   vec.push_back(1);
   {
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
@@ -34,234 +34,239 @@ int main() {
     uint32_t windowFlags = SDL_WINDOW_RESIZABLE;
     auto *window =
         SDL_CreateWindow("test", surface->w, surface->h, windowFlags);
-    auto app = Paranoixa({.allocator = allocator, .api = GraphicsAPI::SDLGPU});
-    auto backend = app.CreateBackend(GraphicsAPI::SDLGPU);
-    auto device = backend->CreateDevice({allocator, true});
-    device->ClaimWindow(window);
+    {
 
-    std::vector<uint8_t> data;
-    data.resize(surface->w * surface->h * 4);
-    for (int y = 0; y < surface->h; ++y) {
-      for (int x = 0; x < surface->w; ++x) {
-        auto pixel =
-            static_cast<uint32_t *>(surface->pixels) + y * surface->w + x;
-        auto r = (*pixel & 0x00FF0000) >> 16;
-        auto g = (*pixel & 0x0000FF00) >> 8;
-        auto b = (*pixel & 0x000000FF);
-        auto a = (*pixel & 0xFF000000) >> 24;
-        auto index = (y * surface->w + x) * 4;
-        data[index + 0] = r;
-        data[index + 1] = g;
-        data[index + 2] = b;
-        data[index + 3] = a;
+      auto backend = Paranoixa::CreateBackend(allocator, GraphicsAPI::SDLGPU);
+      auto device = backend->CreateDevice({allocator, true});
+      device->ClaimWindow(window);
+
+      std::vector<uint8_t> data;
+      data.resize(surface->w * surface->h * 4);
+      for (int y = 0; y < surface->h; ++y) {
+        for (int x = 0; x < surface->w; ++x) {
+          auto pixel =
+              static_cast<uint32_t *>(surface->pixels) + y * surface->w + x;
+          auto r = (*pixel & 0x00FF0000) >> 16;
+          auto g = (*pixel & 0x0000FF00) >> 8;
+          auto b = (*pixel & 0x000000FF);
+          auto a = (*pixel & 0xFF000000) >> 24;
+          auto index = (y * surface->w + x) * 4;
+          data[index + 0] = r;
+          data[index + 1] = g;
+          data[index + 2] = b;
+          data[index + 3] = a;
+        }
       }
-    }
-    Texture::CreateInfo textureCreateInfo{};
-    textureCreateInfo.allocator = allocator;
-    textureCreateInfo.width = static_cast<uint32_t>(surface->w);
-    textureCreateInfo.height = static_cast<uint32_t>(surface->h);
-    textureCreateInfo.layerCountOrDepth = 1, textureCreateInfo.numLevels = 1;
-    textureCreateInfo.sampleCount = SampleCount::x1;
-    textureCreateInfo.format = TextureFormat::R8G8B8A8_UNORM;
-    textureCreateInfo.type = TextureType::Texture2D;
-    textureCreateInfo.usage = TextureUsage::Sampler;
-    auto texture = device->CreateTexture(textureCreateInfo);
+      Texture::CreateInfo textureCreateInfo{};
+      textureCreateInfo.allocator = allocator;
+      textureCreateInfo.width = static_cast<uint32_t>(surface->w);
+      textureCreateInfo.height = static_cast<uint32_t>(surface->h);
+      textureCreateInfo.layerCountOrDepth = 1, textureCreateInfo.numLevels = 1;
+      textureCreateInfo.sampleCount = SampleCount::x1;
+      textureCreateInfo.format = TextureFormat::R8G8B8A8_UNORM;
+      textureCreateInfo.type = TextureType::Texture2D;
+      textureCreateInfo.usage = TextureUsage::Sampler;
+      auto texture = device->CreateTexture(textureCreateInfo);
 
-    TransferBuffer::CreateInfo stagingTextureBufferCI = {
-        .allocator = allocator,
-        .usage = TransferBufferUsage::Upload,
-        .size = textureCreateInfo.width * textureCreateInfo.height * 4,
-    };
-    auto stagingTextureBuffer =
-        device->CreateTransferBuffer(stagingTextureBufferCI);
-    auto mapped = stagingTextureBuffer->Map();
-    memcpy(mapped, data.data(), data.size());
-    stagingTextureBuffer->Unmap();
-
-    auto &fileLoader = GetFileLoader();
-    std::vector<char> vertCode, fragCode;
-    // load in plain
-    fileLoader->Load("res/shader.vert.spv", vertCode);
-    fileLoader->Load("res/shader.frag.spv", fragCode);
-
-    Shader::CreateInfo vsci = {
-        .allocator = allocator,
-        .size = vertCode.size(),
-        .data = vertCode.data(),
-        .entrypoint = "main",
-        .stage = ShaderStage::Vertex,
-        .numSamplers = 0,
-        .numStorageTextures = 0,
-        .numUniformBuffers = 0,
-    };
-    auto vs = device->CreateShader(vsci);
-
-    Shader::CreateInfo fsci = {
-        .allocator = allocator,
-        .size = fragCode.size(),
-        .data = fragCode.data(),
-        .entrypoint = "main",
-        .stage = ShaderStage::Fragment,
-        .numSamplers = 1,
-        .numStorageTextures = 0,
-        .numUniformBuffers = 2,
-    };
-    auto fs = device->CreateShader(fsci);
-
-    /*
-   (-1, -1)  (1, -1)
-      +--------+
-      |        |
-      |        |
-      |        |
-      +--------+
-   (-1,  1)  (1,  1)
-    */
-    float triangleVerts[] = {
-        -1.f, -1.f, 0.f, 0, 1, 0, 0, 1, // position, uv, color
-        -1.f, 1.f,  0.f, 0, 0, 1, 0, 0, //
-        1.f,  -1.f, 0.f, 1, 1, 0, 0, 1, //
-        1.f,  -1.f, 0.f, 1, 1, 0, 0, 1, //
-        -1.f, 1.f,  0.f, 0, 0, 1, 0, 0, //
-        1.f,  1.f,  0.f, 1, 0, 1, 0, 0, //
-    };
-    Buffer::CreateInfo vbci = {
-        .allocator = allocator,
-        .usage = BufferUsage::Vertex,
-        .size = sizeof(triangleVerts),
-    };
-    auto vertexBuffer = device->CreateBuffer(vbci);
-    TransferBuffer::CreateInfo stagingVertexBufferCI = {
-        .allocator = allocator,
-        .usage = TransferBufferUsage::Upload,
-        .size = vbci.size,
-    };
-    auto stagingVertexBuffer =
-        device->CreateTransferBuffer(stagingVertexBufferCI);
-    mapped = stagingVertexBuffer->Map();
-    memcpy(mapped, triangleVerts, vbci.size);
-    stagingVertexBuffer->Unmap();
-
-    // transfer texture/vertex buffer to gpu
-    auto command = device->CreateCommandBuffer({allocator});
-    auto copyPass = command->BeginCopyPass();
-
-    {
-
-      CopyPass::TextureTransferInfo info{
-          .transferBuffer = stagingTextureBuffer,
-          .offset = 0,
+      TransferBuffer::CreateInfo stagingTextureBufferCI = {
+          .allocator = allocator,
+          .usage = TransferBufferUsage::Upload,
+          .size = textureCreateInfo.width * textureCreateInfo.height * 4,
       };
-      CopyPass::TextureRegion region{
-          .texture = texture,
-          .width = textureCreateInfo.width,
-          .height = textureCreateInfo.height,
-          .depth = 1,
+      auto stagingTextureBuffer =
+          device->CreateTransferBuffer(stagingTextureBufferCI);
+      auto mapped = stagingTextureBuffer->Map();
+      memcpy(mapped, data.data(), data.size());
+      stagingTextureBuffer->Unmap();
+
+      auto &fileLoader = GetFileLoader();
+      std::vector<char> vertCode, fragCode;
+      // load in plain
+      fileLoader->Load("res/shader.vert.spv", vertCode);
+      fileLoader->Load("res/shader.frag.spv", fragCode);
+
+      Shader::CreateInfo vsci = {
+          .allocator = allocator,
+          .size = vertCode.size(),
+          .data = vertCode.data(),
+          .entrypoint = "main",
+          .stage = ShaderStage::Vertex,
+          .numSamplers = 0,
+          .numStorageTextures = 0,
+          .numUniformBuffers = 0,
       };
-      copyPass->UploadTexture(info, region, false);
-    }
-    {
-      CopyPass::BufferTransferInfo location{
-          .transferBuffer = stagingVertexBuffer,
-          .offset = 0,
+      auto vs = device->CreateShader(vsci);
+
+      Shader::CreateInfo fsci = {
+          .allocator = allocator,
+          .size = fragCode.size(),
+          .data = fragCode.data(),
+          .entrypoint = "main",
+          .stage = ShaderStage::Fragment,
+          .numSamplers = 1,
+          .numStorageTextures = 0,
+          .numUniformBuffers = 2,
       };
-      CopyPass::BufferRegion region{
-          .buffer = vertexBuffer,
-          .offset = 0,
+      auto fs = device->CreateShader(fsci);
+
+      /*
+     (-1, -1)  (1, -1)
+        +--------+
+        |        |
+        |        |
+        |        |
+        +--------+
+     (-1,  1)  (1,  1)
+      */
+      float triangleVerts[] = {
+          -1.f, -1.f, 0.f, 0, 1, 0, 0, 1, // position, uv, color
+          -1.f, 1.f,  0.f, 0, 0, 1, 0, 0, //
+          1.f,  -1.f, 0.f, 1, 1, 0, 0, 1, //
+          1.f,  -1.f, 0.f, 1, 1, 0, 0, 1, //
+          -1.f, 1.f,  0.f, 0, 0, 1, 0, 0, //
+          1.f,  1.f,  0.f, 1, 0, 1, 0, 0, //
+      };
+      Buffer::CreateInfo vbci = {
+          .allocator = allocator,
+          .usage = BufferUsage::Vertex,
+          .size = sizeof(triangleVerts),
+      };
+      auto vertexBuffer = device->CreateBuffer(vbci);
+      TransferBuffer::CreateInfo stagingVertexBufferCI = {
+          .allocator = allocator,
+          .usage = TransferBufferUsage::Upload,
           .size = vbci.size,
       };
-      copyPass->UploadBuffer(location, region, false);
-    }
-    command->EndCopyPass(copyPass);
-    device->SubmitCommandBuffer(command);
+      auto stagingVertexBuffer =
+          device->CreateTransferBuffer(stagingVertexBufferCI);
+      mapped = stagingVertexBuffer->Map();
+      memcpy(mapped, triangleVerts, vbci.size);
+      stagingVertexBuffer->Unmap();
 
-    VertexBufferDescription vbDesc = {};
-    vbDesc.inputRate = VertexInputRate::Vertex;
-    vbDesc.instanceStepRate = 0;
-    vbDesc.pitch = sizeof(float) * 8;
-    vbDesc.slot = 0;
+      // transfer texture/vertex buffer to gpu
+      auto command = device->CreateCommandBuffer({allocator});
+      auto copyPass = command->BeginCopyPass();
 
-    VertexAttribute vertexAttributes[] = {
-        {0, 0, VertexElementFormat::Float3, 0},
-        {1, 0, VertexElementFormat::Float2, sizeof(float) * 3},
-        {2, 0, VertexElementFormat::Float3, sizeof(float) * 5},
-    };
-    ColorTargetDescription colorTargetDescription = {
-        .format = TextureFormat::R8G8B8A8_UNORM,
-        .blendState = ColorTargetBlendState{},
-    };
-    ColorTargetDescription colorTargetDescriptions[] = {colorTargetDescription};
-    GraphicsPipeline::CreateInfo pipelineCreateInfo = {
-        .allocator = allocator,
-        .vertexShader = vs,
-        .fragmentShader = fs,
-        .vertexInputState =
-            VertexInputState{
-                .vertexBufferDescriptions = &vbDesc,
-                .numVertexBuffers = 1,
-                .vertexAttributes = vertexAttributes,
-                .numVertexAttributes = _countof(vertexAttributes),
-            },
-        .primitiveType = PrimitiveType::TriangleList,
-        .rasterizerState =
-            RasterizerState{
-                .fillMode = FillMode::Solid,
-                .cullMode = CullMode::None,
-                .frontFace = FrontFace::Clockwise,
-            },
-        .multiSampleState = {},
-        .depthStencilState = {},
-        .targetInfo =
-            TargetInfo{
+      {
 
-                .colorTargetDescriptions = colorTargetDescriptions,
-                .numColorTargets = _countof(colorTargetDescriptions),
-            },
-    };
-    auto pipeline = device->CreateGraphicsPipeline(pipelineCreateInfo);
+        CopyPass::TextureTransferInfo info{
+            .transferBuffer = stagingTextureBuffer,
+            .offset = 0,
+        };
+        CopyPass::TextureRegion region{
+            .texture = texture,
+            .width = textureCreateInfo.width,
+            .height = textureCreateInfo.height,
+            .depth = 1,
+        };
+        copyPass->UploadTexture(info, region, false);
+      }
+      {
+        CopyPass::BufferTransferInfo location{
+            .transferBuffer = stagingVertexBuffer,
+            .offset = 0,
+        };
+        CopyPass::BufferRegion region{
+            .buffer = vertexBuffer,
+            .offset = 0,
+            .size = vbci.size,
+        };
+        copyPass->UploadBuffer(location, region, false);
+      }
+      command->EndCopyPass(copyPass);
+      device->SubmitCommandBuffer(command);
 
-    Sampler::CreateInfo samplerCI{};
-    samplerCI.allocator = allocator;
-    samplerCI.minFilter = Filter::Linear;
-    samplerCI.magFilter = Filter::Linear;
-    samplerCI.mipmapMode = MipmapMode::Nearest;
-    samplerCI.addressModeU = AddressMode::ClampToEdge;
-    samplerCI.addressModeV = AddressMode::ClampToEdge;
-    samplerCI.addressModeW = AddressMode::ClampToEdge;
-    auto sampler = device->CreateSampler(samplerCI);
+      VertexBufferDescription vbDesc = {};
+      vbDesc.inputRate = VertexInputRate::Vertex;
+      vbDesc.instanceStepRate = 0;
+      vbDesc.pitch = sizeof(float) * 8;
+      vbDesc.slot = 0;
+      Array<VertexBufferDescription> vbDescs(allocator);
+      vbDescs.push_back(vbDesc);
 
-    CommandBuffer::CreateInfo commandBufferCI{};
-    commandBufferCI.allocator = allocator;
-    auto cmdbuf = device->CreateCommandBuffer(commandBufferCI);
-    auto swapchainTexture = device->AcquireSwapchainTexture(cmdbuf);
+      Array<VertexAttribute> vertexAttributes(allocator);
+      {
+        vertexAttributes.push_back({0, 0, VertexElementFormat::Float3, 0});
+        vertexAttributes.push_back(
+            {1, 0, VertexElementFormat::Float2, sizeof(float) * 3});
+        vertexAttributes.push_back(
+            {2, 0, VertexElementFormat::Float3, sizeof(float) * 5});
+      };
+      ColorTargetDescription colorTargetDescription = {
+          .format = TextureFormat::B8G8R8A8_UNORM,
+          .blendState = ColorTargetBlendState{},
+      };
+      Array<ColorTargetDescription> colorTargetDescriptions(allocator);
+      colorTargetDescriptions.push_back(colorTargetDescription);
+      GraphicsPipeline::CreateInfo pipelineCreateInfo = {
+          .allocator = allocator,
+          .vertexShader = vs,
+          .fragmentShader = fs,
+          .vertexInputState =
+              VertexInputState{
+                  .vertexBufferDescriptions = vbDescs,
+                  .vertexAttributes = vertexAttributes,
+              },
+          .primitiveType = PrimitiveType::TriangleList,
+          .rasterizerState =
+              RasterizerState{
+                  .fillMode = FillMode::Solid,
+                  .cullMode = CullMode::None,
+                  .frontFace = FrontFace::Clockwise,
+              },
+          .multiSampleState = {},
+          .depthStencilState = {},
+          .targetInfo =
+              TargetInfo{
+                  .colorTargetDescriptions = colorTargetDescriptions,
+              },
+      };
+      auto pipeline = device->CreateGraphicsPipeline(pipelineCreateInfo);
 
-    RenderPass::ColorTargetInfo colorTargetInfo = {
-        .texture = swapchainTexture,
-        .loadOp = LoadOp::Clear,
-        .storeOp = StoreOp::Store,
-    };
-    auto colorTargetInfos = Array<RenderPass::ColorTargetInfo>(allocator);
-    colorTargetInfos.push_back(colorTargetInfo);
-    auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
-    renderPass->BindGraphicsPipeline(pipeline);
-    Array<RenderPass::BufferBinding> bindings(allocator);
-    bindings.push_back({vertexBuffer, 0});
+      Sampler::CreateInfo samplerCI{};
+      samplerCI.allocator = allocator;
+      samplerCI.minFilter = Filter::Linear;
+      samplerCI.magFilter = Filter::Linear;
+      samplerCI.mipmapMode = MipmapMode::Nearest;
+      samplerCI.addressModeU = AddressMode::ClampToEdge;
+      samplerCI.addressModeV = AddressMode::ClampToEdge;
+      samplerCI.addressModeW = AddressMode::ClampToEdge;
+      auto sampler = device->CreateSampler(samplerCI);
 
-    renderPass->BindVertexBuffers(0, bindings);
-    auto textureBindings = Array<RenderPass::TextureSamplerBinding>(allocator);
-    textureBindings.push_back({sampler, texture});
-    renderPass->BindFragmentSamplers(0, textureBindings);
-    renderPass->DrawPrimitives(6, 1, 0, 0);
-    cmdbuf->EndRenderPass(renderPass);
-    device->SubmitCommandBuffer(cmdbuf);
+      CommandBuffer::CreateInfo commandBufferCI{};
+      commandBufferCI.allocator = allocator;
+      auto cmdbuf = device->CreateCommandBuffer(commandBufferCI);
+      auto swapchainTexture = device->AcquireSwapchainTexture(cmdbuf);
 
-    bool running = true;
-    while (running) {
-      SDL_Event event;
-      while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) {
-          running = false;
-          break;
+      RenderPass::ColorTargetInfo colorTargetInfo = {
+          .texture = swapchainTexture,
+          .loadOp = LoadOp::Clear,
+          .storeOp = StoreOp::Store,
+      };
+      auto colorTargetInfos = Array<RenderPass::ColorTargetInfo>(allocator);
+      colorTargetInfos.push_back(colorTargetInfo);
+      auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
+      renderPass->BindGraphicsPipeline(pipeline);
+      Array<RenderPass::BufferBinding> bindings(allocator);
+      bindings.push_back({vertexBuffer, 0});
+
+      renderPass->BindVertexBuffers(0, bindings);
+      auto textureBindings =
+          Array<RenderPass::TextureSamplerBinding>(allocator);
+      textureBindings.push_back({sampler, texture});
+      renderPass->BindFragmentSamplers(0, textureBindings);
+      renderPass->DrawPrimitives(6, 1, 0, 0);
+      cmdbuf->EndRenderPass(renderPass);
+      device->SubmitCommandBuffer(cmdbuf);
+
+      bool running = true;
+      while (running) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+          if (event.type == SDL_EVENT_QUIT) {
+            running = false;
+            break;
+          }
         }
       }
     }

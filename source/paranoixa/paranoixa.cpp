@@ -3,10 +3,12 @@
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
 #include "paranoixa.hpp"
-#include "tlsf_allocator.hpp"
+
+#include "allocator/std_allocator.hpp"
+#include "allocator/tlsf_allocator.hpp"
 
 #include "d3d12u/d3d12u_renderer.hpp"
-#include "sdlgpu/sdlgpu_renderer.hpp"
+#include "sdlgpu/sdlgpu_backend.hpp"
 #include "vulkan/vulkan_renderer.hpp"
 #include "webgpu/webgpu_renderer.hpp"
 
@@ -46,13 +48,8 @@ bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
   }
   return false;
 }
-static SDL_Window *window = nullptr;
-static bool running = true;
-Paranoixa::~Paranoixa() {
-  SDL_DestroyWindow(window);
-  SDL_Quit();
-}
-Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
+Ptr<Backend> Paranoixa::CreateBackend(AllocatorPtr allocator,
+                                      const GraphicsAPI &api) {
 #ifndef __EMSCRIPTEN__
   switch (api) {
   case GraphicsAPI::Vulkan: {
@@ -67,7 +64,7 @@ Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
     // TODO
   }
   case GraphicsAPI::SDLGPU: {
-    Ptr<Backend> p = MakePtr<SDLGPUBackend>(allocator);
+    Ptr<Backend> p = MakePtr<sdlgpu::Backend>(allocator);
     return p;
   }
   default:
@@ -77,31 +74,10 @@ Ptr<Backend> Paranoixa::CreateBackend(const GraphicsAPI &api) {
   return nullptr;
 }
 AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
+#ifdef _MSC_VER
   return MakeAllocatorPtr<TLSFAllocator>(size);
-}
-Paranoixa::Paranoixa(const Desc &desc) : allocator(desc.allocator) {}
-void *Paranoixa::GetWindow() { return static_cast<void *>(window); }
-void Paranoixa::Run() {
-#ifndef __EMSCRIPTEN__
-  while (this->IsRunning()) {
-    this->Loop();
-  }
 #else
-  emscripten_set_main_loop_arg(
-      [](void *userData) {
-        Paranoixa *app = reinterpret_cast<Paranoixa *>(userData);
-        app->Loop();
-      },
-      this, 0, 1);
-#endif // __EMSCRIPTEN__
-}
-bool Paranoixa::IsRunning() { return running; }
-void Paranoixa::Loop() {
-  SDL_Event event;
-  while (SDL_PollEvent(&event)) {
-    if (event.type == SDL_EVENT_QUIT) {
-      running = false;
-    }
-  }
+  return MakeAllocatorPtr<StdAllocator>(size);
+#endif
 }
 } // namespace paranoixa

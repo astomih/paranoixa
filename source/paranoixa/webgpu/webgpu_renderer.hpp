@@ -6,16 +6,16 @@
 #include <webgpu/webgpu.h>
 
 namespace paranoixa {
-class WebGPURenderer : public Renderer {
+class WebGPURenderer {
 public:
   WebGPURenderer(AllocatorPtr pAllocator);
-  ~WebGPURenderer() override;
-  void Initialize(void *window) override;
-  void ProcessEvent(void *event) override;
-  void BeginFrame() override;
-  void EndFrame() override;
+  ~WebGPURenderer();
+  void Initialize(void *window);
+  void ProcessEvent(void *event);
+  void BeginFrame();
+  void EndFrame();
 
-  void AddGuiUpdateCallBack(std::function<void()> callBack) override;
+  void AddGuiUpdateCallBack(std::function<void()> callBack);
   class Texture {
   public:
     Texture() = default;
@@ -38,11 +38,11 @@ private:
   void InitializePipeline();
 
   WGPUTextureView GetNextSurfaceTextureView();
-  #ifdef DAWN
-  WGPUStringView  GetStringView(const char *str);
-  #else
-  const char* GetStringView(const char *str);
-  #endif
+#ifdef DAWN
+  WGPUStringView GetStringView(const char *str);
+#else
+  const char *GetStringView(const char *str);
+#endif
 
   // WebGPU instance
   WGPUInstance instance;

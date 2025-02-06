@@ -23,13 +23,13 @@ template <typename T,
 AllocatorPtr MakeAllocatorPtr(Args &&...args) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
-template <typename T> class StdAllocator : public std::allocator<T> {
+template <typename T> class STLAllocator : public std::allocator<T> {
 public:
   using value_type = T;
-  StdAllocator() = default;
-  StdAllocator(AllocatorPtr allocator) : allocator(allocator) {}
+  STLAllocator() = default;
+  STLAllocator(AllocatorPtr allocator) : allocator(allocator) {}
   template <typename U>
-  StdAllocator(const StdAllocator<U> &other) : allocator(other.allocator) {}
+  STLAllocator(const STLAllocator<U> &other) : allocator(other.allocator) {}
 
   T *allocate(std::size_t n) {
     return reinterpret_cast<T *>(allocator->Allocate(n * sizeof(T)));
