@@ -7,75 +7,76 @@
 
 #include <vector>
 
-namespace paranoixa {
-class SDLGPUDevice : public Device {
+namespace paranoixa::sdlgpu {
+namespace px = paranoixa;
+class Device : public px::Device {
 public:
-  SDLGPUDevice(const CreateInfo &createInfo, SDL_GPUDevice *device)
-      : Device(createInfo), device(device), window(nullptr) {}
+  Device(const CreateInfo &createInfo, SDL_GPUDevice *device)
+      : px::Device(createInfo), device(device), window(nullptr) {}
   SDL_GPUDevice *GetNative() { return device; }
-  virtual ~SDLGPUDevice() override;
+  virtual ~Device() override;
   virtual void ClaimWindow(void *window) override;
-  virtual Ptr<Buffer>
+  virtual Ptr<px::Buffer>
   CreateBuffer(const Buffer::CreateInfo &createInfo) override;
-  virtual Ptr<Texture>
+  virtual Ptr<px::Texture>
   CreateTexture(const Texture::CreateInfo &createInfo) override;
-  virtual Ptr<Sampler>
+  virtual Ptr<px::Sampler>
   CreateSampler(const Sampler::CreateInfo &createInfo) override;
-  virtual Ptr<TransferBuffer>
+  virtual Ptr<px::TransferBuffer>
   CreateTransferBuffer(const TransferBuffer::CreateInfo &createInfo) override;
-  virtual Ptr<Shader>
+  virtual Ptr<px::Shader>
   CreateShader(const Shader::CreateInfo &createInfo) override;
-  virtual Ptr<CommandBuffer>
+  virtual Ptr<px::CommandBuffer>
   CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) override;
-  virtual Ptr<GraphicsPipeline> CreateGraphicsPipeline(
+  virtual Ptr<px::GraphicsPipeline> CreateGraphicsPipeline(
       const GraphicsPipeline::CreateInfo &createInfo) override;
-  virtual Ptr<ComputePipeline>
+  virtual Ptr<px::ComputePipeline>
   CreateComputePipeline(const ComputePipeline::CreateInfo &createInfo) override;
-  virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) override;
-  virtual Ptr<Texture>
-  AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) override;
+  virtual void
+  SubmitCommandBuffer(Ptr<px::CommandBuffer> commandBuffer) override;
+  virtual Ptr<px::Texture>
+  AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) override;
 
 private:
   SDL_GPUDevice *device;
   SDL_Window *window;
 };
-class SDLGPUTexture : public Texture {
+class Texture : public px::Texture {
 public:
-  SDLGPUTexture(const CreateInfo &createInfo, SDLGPUDevice &device,
-                SDL_GPUTexture *texture, bool isSwapchainTexture = false)
-      : Texture(createInfo), device(device), texture(texture),
+  Texture(const CreateInfo &createInfo, Device &device, SDL_GPUTexture *texture,
+          bool isSwapchainTexture = false)
+      : px::Texture(createInfo), device(device), texture(texture),
         isSwapchainTexture(isSwapchainTexture) {}
-  virtual ~SDLGPUTexture() override;
+  virtual ~Texture() override;
 
   inline SDL_GPUTexture *GetNative() const { return texture; }
 
 private:
-  SDLGPUDevice &device;
+  Device &device;
   SDL_GPUTexture *texture;
   bool isSwapchainTexture;
 };
 
-class SDLGPUSampler : public Sampler {
+class Sampler : public px::Sampler {
 public:
-  SDLGPUSampler(const CreateInfo &createInfo, SDLGPUDevice &device,
-                SDL_GPUSampler *sampler)
-      : Sampler(createInfo), device(device), sampler(sampler) {}
-  ~SDLGPUSampler() override;
+  Sampler(const CreateInfo &createInfo, Device &device, SDL_GPUSampler *sampler)
+      : px::Sampler(createInfo), device(device), sampler(sampler) {}
+  ~Sampler() override;
 
   inline SDL_GPUSampler *GetNative() const { return sampler; }
 
 private:
-  SDLGPUDevice &device;
+  Device &device;
   SDL_GPUSampler *sampler;
 };
 
-class SDLGPUTransferBuffer : public TransferBuffer {
+class TransferBuffer : public px::TransferBuffer {
 public:
-  SDLGPUTransferBuffer(const CreateInfo &createInfo, SDLGPUDevice &device,
-                       SDL_GPUTransferBuffer *transferBuffer)
-      : TransferBuffer(createInfo), device(device),
+  TransferBuffer(const CreateInfo &createInfo, Device &device,
+                 SDL_GPUTransferBuffer *transferBuffer)
+      : px::TransferBuffer(createInfo), device(device),
         transferBuffer(transferBuffer) {}
-  ~SDLGPUTransferBuffer() override;
+  ~TransferBuffer() override;
 
   inline SDL_GPUTransferBuffer *GetNative() { return transferBuffer; }
 
@@ -83,47 +84,44 @@ public:
   void Unmap() override;
 
 private:
-  SDLGPUDevice &device;
+  Device &device;
   SDL_GPUTransferBuffer *transferBuffer;
 };
-class SDLGPUBuffer : public Buffer {
+class Buffer : public px::Buffer {
 public:
-  SDLGPUBuffer(const CreateInfo &createInfo, SDLGPUDevice &device,
-               SDL_GPUBuffer *buffer)
-      : Buffer(createInfo), device(device), buffer(buffer) {}
-  ~SDLGPUBuffer() override;
+  Buffer(const CreateInfo &createInfo, Device &device, SDL_GPUBuffer *buffer)
+      : px::Buffer(createInfo), device(device), buffer(buffer) {}
+  ~Buffer() override;
 
   inline SDL_GPUBuffer *GetNative() { return buffer; }
 
 private:
-  SDLGPUDevice &device;
+  Device &device;
   SDL_GPUBuffer *buffer;
 };
-class SDLGPUBackend : public Backend {
+class Backend : public px::Backend {
 public:
-  virtual Ptr<Device>
-  CreateDevice(const Device::CreateInfo &createInfo) override;
+  virtual Ptr<px::Device>
+  CreateDevice(const px::Device::CreateInfo &createInfo) override;
 };
-class SDLGPUShader : public Shader {
+class Shader : public px::Shader {
 public:
-  SDLGPUShader(const CreateInfo &createInfo, SDLGPUDevice &device,
-               SDL_GPUShader *shader)
-      : Shader(createInfo), device(device), shader(shader) {}
-  ~SDLGPUShader() override;
+  Shader(const CreateInfo &createInfo, Device &device, SDL_GPUShader *shader)
+      : px::Shader(createInfo), device(device), shader(shader) {}
+  ~Shader() override;
 
   inline SDL_GPUShader *GetNative() { return shader; }
 
 private:
-  SDLGPUDevice &device;
+  Device &device;
   SDL_GPUShader *shader;
 };
 
-class SDLGPUCopyPass : public CopyPass {
+class CopyPass : public px::CopyPass {
 public:
-  SDLGPUCopyPass(AllocatorPtr allocator,
-                 class SDLGPUCommandBuffer &commandBuffer,
-                 SDL_GPUCopyPass *copyPass)
-      : CopyPass(), commandBuffer(commandBuffer), copyPass(copyPass) {}
+  CopyPass(AllocatorPtr allocator, class CommandBuffer &commandBuffer,
+           SDL_GPUCopyPass *copyPass)
+      : px::CopyPass(), commandBuffer(commandBuffer), copyPass(copyPass) {}
   inline SDL_GPUCopyPass *GetNative() { return copyPass; }
 
   virtual void UploadTexture(const TextureTransferInfo &src,
@@ -139,19 +137,19 @@ public:
 
 private:
   SDL_GPUCopyPass *copyPass;
-  class SDLGPUCommandBuffer &commandBuffer;
+  class CommandBuffer &commandBuffer;
 };
 
-class SDLGPURenderPass : public RenderPass {
+class RenderPass : public px::RenderPass {
 public:
-  SDLGPURenderPass(AllocatorPtr allocator, SDLGPUCommandBuffer &commandBuffer,
-                   SDL_GPURenderPass *renderPass)
-      : RenderPass(), allocator(allocator), commandBuffer(commandBuffer),
+  RenderPass(AllocatorPtr allocator, CommandBuffer &commandBuffer,
+             SDL_GPURenderPass *renderPass)
+      : px::RenderPass(), allocator(allocator), commandBuffer(commandBuffer),
         renderPass(renderPass) {}
 
   inline SDL_GPURenderPass *GetNative() const { return renderPass; }
 
-  void BindGraphicsPipeline(Ptr<GraphicsPipeline> pipeline) override;
+  void BindGraphicsPipeline(Ptr<px::GraphicsPipeline> pipeline) override;
   void BindVertexBuffers(uint32 startSlot,
                          const Array<BufferBinding> &bindings) override;
   void
@@ -163,51 +161,51 @@ public:
 private:
   AllocatorPtr allocator;
   SDL_GPURenderPass *renderPass;
-  class SDLGPUCommandBuffer &commandBuffer;
+  class CommandBuffer &commandBuffer;
 };
 
-class SDLGPUCommandBuffer : public CommandBuffer {
+class CommandBuffer : public px::CommandBuffer {
 public:
-  SDLGPUCommandBuffer(const CreateInfo &createInfo,
-                      SDL_GPUCommandBuffer *commandBuffer)
-      : CommandBuffer(createInfo), commandBuffer(commandBuffer) {}
+  CommandBuffer(const CreateInfo &createInfo,
+                SDL_GPUCommandBuffer *commandBuffer)
+      : px::CommandBuffer(createInfo), commandBuffer(commandBuffer) {}
 
   SDL_GPUCommandBuffer *GetNative() { return commandBuffer; }
 
-  Ptr<CopyPass> BeginCopyPass() override;
-  void EndCopyPass(Ptr<CopyPass> copyPass) override;
-  Ptr<RenderPass>
-  BeginRenderPass(const Array<RenderPass::ColorTargetInfo> &infos) override;
-  void EndRenderPass(Ptr<RenderPass> renderPass) override;
+  Ptr<px::CopyPass> BeginCopyPass() override;
+  void EndCopyPass(Ptr<px::CopyPass> copyPass) override;
+  Ptr<px::RenderPass>
+  BeginRenderPass(const Array<px::RenderPass::ColorTargetInfo> &infos) override;
+  void EndRenderPass(Ptr<px::RenderPass> renderPass) override;
 
 private:
   SDL_GPUCommandBuffer *commandBuffer;
 };
 
-class SDLGPUGraphicsPipeline : public GraphicsPipeline {
+class GraphicsPipeline : public px::GraphicsPipeline {
 public:
-  SDLGPUGraphicsPipeline(const CreateInfo &createInfo, SDLGPUDevice &device,
-                         SDL_GPUGraphicsPipeline *pipeline)
-      : GraphicsPipeline(createInfo), device(device), pipeline(pipeline) {}
-  ~SDLGPUGraphicsPipeline() override;
+  GraphicsPipeline(const CreateInfo &createInfo, Device &device,
+                   SDL_GPUGraphicsPipeline *pipeline)
+      : px::GraphicsPipeline(createInfo), device(device), pipeline(pipeline) {}
+  ~GraphicsPipeline() override;
 
   inline SDL_GPUGraphicsPipeline *GetNative() { return pipeline; }
 
 private:
-  SDLGPUDevice &device;
+  Device &device;
   SDL_GPUGraphicsPipeline *pipeline;
 };
 
-class SDLGPUComputePipeline : public ComputePipeline {
+class ComputePipeline : public px::ComputePipeline {
 public:
-  SDLGPUComputePipeline(const CreateInfo &createInfo,
-                        SDL_GPUComputePipeline *pipeline)
-      : ComputePipeline(createInfo), pipeline(pipeline) {}
+  ComputePipeline(const CreateInfo &createInfo,
+                  SDL_GPUComputePipeline *pipeline)
+      : px::ComputePipeline(createInfo), pipeline(pipeline) {}
 
 private:
   SDL_GPUComputePipeline *pipeline;
 };
 
-} // namespace paranoixa
+} // namespace paranoixa::sdlgpu
 #endif // PARANOIXA_SDLGPU_RENDERER_HPP
 #endif // EMSCRIPTEN

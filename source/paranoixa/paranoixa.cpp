@@ -64,7 +64,7 @@ Ptr<Backend> Paranoixa::CreateBackend(AllocatorPtr allocator,
     // TODO
   }
   case GraphicsAPI::SDLGPU: {
-    Ptr<Backend> p = MakePtr<SDLGPUBackend>(allocator);
+    Ptr<Backend> p = MakePtr<sdlgpu::Backend>(allocator);
     return p;
   }
   default:
