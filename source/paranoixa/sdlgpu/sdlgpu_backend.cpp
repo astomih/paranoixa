@@ -94,6 +94,26 @@ void RenderPass::BindVertexBuffers(uint32 startSlot,
   SDL_BindGPUVertexBuffers(this->renderPass, startSlot, bufferBindings.data(),
                            bufferBindings.size());
 }
+void RenderPass::BindIndexBuffer(const BufferBinding &binding,
+                                 IndexElementSize indexElementSize) {
+  SDL_GPUBufferBinding bufferBinding = {};
+  bufferBinding.buffer = DownCast<Buffer>(binding.buffer)->GetNative();
+  bufferBinding.offset = binding.offset;
+  switch (indexElementSize) {
+  case IndexElementSize::Uint16:
+    SDL_BindGPUIndexBuffer(
+        this->renderPass, &bufferBinding,
+        SDL_GPUIndexElementSize::SDL_GPU_INDEXELEMENTSIZE_16BIT);
+    break;
+  case IndexElementSize::Uint32:
+    SDL_BindGPUIndexBuffer(
+        this->renderPass, &bufferBinding,
+        SDL_GPUIndexElementSize::SDL_GPU_INDEXELEMENTSIZE_32BIT);
+    break;
+  default:
+    assert(false && "Invalid index element size");
+  }
+}
 void RenderPass::BindFragmentSamplers(
     uint32 startSlot, const Array<TextureSamplerBinding> &bindings) {
   Array<SDL_GPUTextureSamplerBinding> samplerBindings(allocator);
@@ -108,10 +128,25 @@ void RenderPass::BindFragmentSamplers(
   SDL_BindGPUFragmentSamplers(this->renderPass, startSlot,
                               samplerBindings.data(), samplerBindings.size());
 }
+void RenderPass::SetViewport(const Viewport &viewport) {
+  SDL_GPUViewport vp = {viewport.x,      viewport.y,        viewport.width,
+                        viewport.height, viewport.minDepth, viewport.maxDepth};
+  SDL_SetGPUViewport(this->renderPass, &vp);
+}
+void RenderPass::SetScissor(uint32 x, uint32 y, uint32 width, uint32 height) {
+  SDL_Rect rect = {x, y, width, height};
+  SDL_SetGPUScissor(this->renderPass, &rect);
+}
 void RenderPass::DrawPrimitives(uint32 vertexCount, uint32 instanceCount,
                                 uint32 firstVertex, uint32 firstInstance) {
   SDL_DrawGPUPrimitives(this->renderPass, vertexCount, instanceCount,
                         firstVertex, firstInstance);
+}
+void RenderPass::DrawIndexedPrimitives(uint32 indexCount, uint32 instanceCount,
+                                       uint32 firstIndex, uint32 vertexOffset,
+                                       uint32 firstInstance) {
+  SDL_DrawGPUIndexedPrimitives(this->renderPass, indexCount, instanceCount,
+                               firstIndex, vertexOffset, firstInstance);
 }
 Ptr<px::CopyPass> CommandBuffer::BeginCopyPass() {
   auto *pass = SDL_BeginGPUCopyPass(this->commandBuffer);
@@ -140,6 +175,10 @@ CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos) {
 }
 void CommandBuffer::EndRenderPass(Ptr<px::RenderPass> renderPass) {
   SDL_EndGPURenderPass(DownCast<RenderPass>(renderPass)->GetNative());
+}
+void CommandBuffer::PushVertexUniformData(uint32 slot, const void *data,
+                                          size_t size) {
+  SDL_PushGPUVertexUniformData(this->commandBuffer, slot, data, size);
 }
 GraphicsPipeline::~GraphicsPipeline() {
   SDL_ReleaseGPUGraphicsPipeline(device.GetNative(), pipeline);
@@ -254,6 +293,16 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
       convert::CullModeFrom(createInfo.rasterizerState.cullMode);
   pipelineCI.rasterizer_state.front_face =
       convert::FrontFaceFrom(createInfo.rasterizerState.frontFace);
+  pipelineCI.rasterizer_state.depth_bias_constant_factor =
+      createInfo.rasterizerState.depthBiasConstantFactor;
+  pipelineCI.rasterizer_state.depth_bias_clamp =
+      createInfo.rasterizerState.depthBiasClamp;
+  pipelineCI.rasterizer_state.depth_bias_slope_factor =
+      createInfo.rasterizerState.depthBiasSlopeFactor;
+  pipelineCI.rasterizer_state.enable_depth_bias =
+      createInfo.rasterizerState.enableDepthBias;
+  pipelineCI.rasterizer_state.enable_depth_clip =
+      createInfo.rasterizerState.enableDepthClip;
   pipelineCI.primitive_type =
       convert::PrimitiveTypeFrom(createInfo.primitiveType);
 
@@ -266,6 +315,22 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
     SDL_GPUColorTargetDescription colorTargetDesc{};
     colorTargetDesc.format = convert::TextureFormatFrom(
         createInfo.targetInfo.colorTargetDescriptions[i].format);
+    auto &pxBlend = createInfo.targetInfo.colorTargetDescriptions[i].blendState;
+    auto &blend = colorTargetDesc.blend_state;
+
+    blend.src_alpha_blendfactor =
+        convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
+    blend.dst_alpha_blendfactor =
+        convert::BlendFactorFrom(pxBlend.dstColorBlendFactor);
+    blend.color_blend_op = convert::BlendOpFrom(pxBlend.colorBlendOp);
+    blend.src_alpha_blendfactor =
+        convert::BlendFactorFrom(pxBlend.srcAlphaBlendFactor);
+    blend.dst_alpha_blendfactor =
+        convert::BlendFactorFrom(pxBlend.dstAlphaBlendFactor);
+    blend.alpha_blend_op = convert::BlendOpFrom(pxBlend.alphaBlendOp);
+    blend.color_write_mask = pxBlend.colorWriteMask;
+    blend.enable_blend = pxBlend.enableBlend;
+    blend.enable_color_write_mask = pxBlend.enableColorWriteMask;
     colorTargetDescs[i] = colorTargetDesc;
   }
   pipelineCI.target_info.color_target_descriptions = colorTargetDescs.data();

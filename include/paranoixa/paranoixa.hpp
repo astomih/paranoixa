@@ -111,13 +111,7 @@ enum class BlendFactor {
   OneMinusDstAlpha,
   ConstantColor,
   OneMinusConstantColor,
-  ConstantAlpha,
-  OneMinusConstantAlpha,
   SrcAlphaSaturate,
-  Src1Color,
-  OneMinusSrc1Color,
-  Src1Alpha,
-  OneMinusSrc1Alpha,
 };
 enum class BlendOp {
   Add,
@@ -128,18 +122,25 @@ enum class BlendOp {
 };
 struct ColorComponent {
   enum Type : uint8_t {
-    R = 1,
-    G = 2,
-    B = 4,
-    A = 8,
+    R = (1u << 0),
+    G = (1u << 1),
+    B = (1u << 2),
+    A = (1u << 3),
+
+    RGB = R | G | B,
+    RGBA = R | G | B | A,
   } type;
   ColorComponent(unsigned int v) : type(static_cast<Type>(v)) {}
   operator Type() { return type; }
 };
+enum class IndexElementSize { Uint16, Uint32 };
 struct RasterizerState {
   FillMode fillMode;
   CullMode cullMode;
   FrontFace frontFace;
+  float depthBiasConstantFactor;
+  float depthBiasClamp;
+  float depthBiasSlopeFactor;
   bool enableDepthBias;
   bool enableDepthClip;
 };
@@ -374,6 +375,14 @@ public:
   virtual void DownloadBuffer(const BufferRegion &src,
                               const BufferTransferInfo &dst) = 0;
 };
+struct Viewport {
+  float x;
+  float y;
+  float width;
+  float height;
+  float minDepth;
+  float maxDepth;
+};
 class RenderPass {
 public:
   virtual ~RenderPass() = default;
@@ -381,11 +390,18 @@ public:
   virtual void BindGraphicsPipeline(Ptr<GraphicsPipeline> graphicsPipeline) = 0;
   virtual void BindVertexBuffers(uint32 slot,
                                  const Array<BufferBinding> &bindings) = 0;
+  virtual void BindIndexBuffer(const BufferBinding &binding,
+                               IndexElementSize indexElementSize) = 0;
   virtual void
   BindFragmentSamplers(uint32 slot,
                        const Array<TextureSamplerBinding> &bindings) = 0;
+  virtual void SetViewport(const Viewport &viewport) = 0;
+  virtual void SetScissor(uint32 x, uint32 y, uint32 width, uint32 height) = 0;
   virtual void DrawPrimitives(uint32 numVertices, uint32 numInstances,
                               uint32 firstVertex, uint32 firstInstance) = 0;
+  virtual void DrawIndexedPrimitives(uint32 numIndices, uint32 numInstances,
+                                     uint32 firstIndex, uint32 vertexOffset,
+                                     uint32 firstInstance) = 0;
 
 protected:
   RenderPass() = default;
@@ -406,6 +422,9 @@ public:
   virtual Ptr<class RenderPass>
   BeginRenderPass(const Array<ColorTargetInfo> &infos) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
+
+  virtual void PushVertexUniformData(uint32 slot, const void *data,
+                                     size_t size) = 0;
 
 protected:
   CommandBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}

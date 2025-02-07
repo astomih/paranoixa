@@ -210,5 +210,53 @@ TransferBufferUsageFrom(TransferBufferUsage transferBufferUsage) {
   }
 }
 
+SDL_GPUBlendFactor BlendFactorFrom(BlendFactor blendFactor) {
+  switch (blendFactor) {
+  case BlendFactor::Zero:
+    return SDL_GPU_BLENDFACTOR_ZERO;
+  case BlendFactor::One:
+    return SDL_GPU_BLENDFACTOR_ONE;
+  case BlendFactor::SrcColor:
+    return SDL_GPU_BLENDFACTOR_SRC_COLOR;
+  case BlendFactor::OneMinusSrcColor:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
+  case BlendFactor::SrcAlpha:
+    return SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+  case BlendFactor::OneMinusSrcAlpha:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+  case BlendFactor::DstAlpha:
+    return SDL_GPU_BLENDFACTOR_DST_ALPHA;
+  case BlendFactor::OneMinusDstAlpha:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+  case BlendFactor::ConstantColor:
+    return SDL_GPU_BLENDFACTOR_CONSTANT_COLOR;
+  case BlendFactor::OneMinusConstantColor:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR;
+  case BlendFactor::SrcAlphaSaturate:
+    return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
+  default:
+    assert(false && "Invalid blend factor");
+    return SDL_GPU_BLENDFACTOR_ZERO;
+  }
+}
+
+SDL_GPUBlendOp BlendOpFrom(BlendOp blendOp) {
+  switch (blendOp) {
+  case BlendOp::Add:
+    return SDL_GPU_BLENDOP_ADD;
+  case BlendOp::Subtract:
+    return SDL_GPU_BLENDOP_SUBTRACT;
+  case BlendOp::ReverseSubtract:
+    return SDL_GPU_BLENDOP_REVERSE_SUBTRACT;
+  case BlendOp::Min:
+    return SDL_GPU_BLENDOP_MIN;
+  case BlendOp::Max:
+    return SDL_GPU_BLENDOP_MAX;
+  default:
+    assert(false && "Invalid blend operation");
+    return SDL_GPU_BLENDOP_ADD;
+  }
+}
+
 } // namespace convert
 } // namespace paranoixa::sdlgpu

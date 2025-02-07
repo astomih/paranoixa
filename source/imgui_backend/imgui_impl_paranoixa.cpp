@@ -191,12 +191,15 @@ ImGui_ImplParanoixa_Init(ImGui_ImplParanoixa_InitInfo *info) {
   ImGui_ImplParanoixa_CreateDeviceObjects();
 }
 
-IMGUI_IMPL_API void ImGui_ImplParanoixa_Shutdown() {
-  return IMGUI_IMPL_API void();
-}
+IMGUI_IMPL_API void ImGui_ImplParanoixa_Shutdown() {}
 
 IMGUI_IMPL_API void ImGui_ImplParanoixa_NewFrame() {
-  return IMGUI_IMPL_API void();
+  ImGui_ImplParanoixa_Data *bd = ImGui_ImplParanoixa_GetBackendData();
+  IM_ASSERT(bd != nullptr && "Context or backend not initialized! Did you call "
+                             "ImGui_ImplParanoixa_Init()?");
+
+  if (!bd->FontTexture)
+    ImGui_ImplParanoixa_CreateFontsTexture();
 }
 
 IMGUI_IMPL_API void
@@ -204,13 +207,143 @@ Imgui_ImplParanoixa_PrepareDrawData(ImDrawData *draw_data,
                                     px::Ptr<px::CommandBuffer> command_buffer) {
   return IMGUI_IMPL_API void();
 }
+static void ImGui_ImplParanoixa_SetupRenderState(
+    ImDrawData *draw_data, px::Ptr<px::GraphicsPipeline> pipeline,
+    px::Ptr<px::CommandBuffer> command_buffer,
+    px::Ptr<px::RenderPass> render_pass, ImGui_ImplParanoixa_FrameData *fd,
+    uint32_t fb_width, uint32_t fb_height) {
+  ImGui_ImplParanoixa_Data *bd = ImGui_ImplParanoixa_GetBackendData();
+
+  // Bind graphics pipeline
+  render_pass->BindGraphicsPipeline(pipeline);
+
+  // Bind Vertex And Index Buffers
+  if (draw_data->TotalVtxCount > 0) {
+    px::Array<px::BufferBinding> vertex_buffer_bindings(bd->InitInfo.Allocator);
+    px::BufferBinding vertex_buffer_binding;
+    vertex_buffer_binding.buffer = fd->VertexBuffer;
+    vertex_buffer_binding.offset = 0;
+    vertex_buffer_bindings.push_back(vertex_buffer_binding);
+
+    px::Array<px::BufferBinding> index_buffer_bindings(bd->InitInfo.Allocator);
+    px::BufferBinding index_buffer_binding = {};
+    index_buffer_binding.buffer = fd->IndexBuffer;
+    index_buffer_binding.offset = 0;
+    index_buffer_bindings.push_back(index_buffer_binding);
+    render_pass->BindVertexBuffers(0, vertex_buffer_bindings);
+    render_pass->BindIndexBuffer(index_buffer_binding,
+                                 sizeof(ImDrawIdx) == 2
+                                     ? px::IndexElementSize::Uint16
+                                     : px::IndexElementSize::Uint32);
+  }
+
+  // Setup viewport
+  px::Viewport viewport = {};
+  viewport.x = 0;
+  viewport.y = 0;
+  viewport.width = (float)fb_width;
+  viewport.height = (float)fb_height;
+  viewport.minDepth = 0.0f;
+  viewport.maxDepth = 1.0f;
+  render_pass->SetViewport(viewport);
+
+  // Setup scale and translation
+  // Our visible imgui space lies from draw_data->DisplayPps (top left) to
+  // draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is
+  // (0,0) for single viewport apps.
+  struct UBO {
+    float scale[2];
+    float translation[2];
+  } ubo;
+  ubo.scale[0] = 2.0f / draw_data->DisplaySize.x;
+  ubo.scale[1] = 2.0f / draw_data->DisplaySize.y;
+  ubo.translation[0] = -1.0f - draw_data->DisplayPos.x * ubo.scale[0];
+  ubo.translation[1] = -1.0f - draw_data->DisplayPos.y * ubo.scale[1];
+  command_buffer->PushVertexUniformData(0, &ubo, sizeof(UBO));
+}
 
 IMGUI_IMPL_API void
 ImGui_ImplParanoixa_RenderDrawData(ImDrawData *draw_data,
                                    px::Ptr<px::CommandBuffer> command_buffer,
                                    px::Ptr<px::RenderPass> render_pass,
                                    px::Ptr<px::GraphicsPipeline> pipeline) {
-  return IMGUI_IMPL_API void();
+  int fb_width =
+      (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+  int fb_height =
+      (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+  if (fb_width <= 0 || fb_height <= 0)
+    return;
+
+  ImGui_ImplParanoixa_Data *bd = ImGui_ImplParanoixa_GetBackendData();
+  ImGui_ImplParanoixa_FrameData *fd = &bd->MainWindowFrameData;
+
+  if (pipeline == nullptr)
+    pipeline = bd->Pipeline;
+
+  ImGui_ImplParanoixa_SetupRenderState(draw_data, pipeline, command_buffer,
+                                       render_pass, fd, fb_width, fb_height);
+
+  // Will project scissor/clipping rectangles into framebuffer space
+  ImVec2 clip_off = draw_data->DisplayPos; // (0,0) unless using multi-viewports
+  ImVec2 clip_scale =
+      draw_data->FramebufferScale; // (1,1) unless using retina display which
+                                   // are often (2,2)
+
+  // Render command lists
+  // (Because we merged all buffers into a single one, we maintain our own
+  // offset into them)
+  int global_vtx_offset = 0;
+  int global_idx_offset = 0;
+  for (int n = 0; n < draw_data->CmdListsCount; n++) {
+    const ImDrawList *draw_list = draw_data->CmdLists[n];
+    for (int cmd_i = 0; cmd_i < draw_list->CmdBuffer.Size; cmd_i++) {
+      const ImDrawCmd *pcmd = &draw_list->CmdBuffer[cmd_i];
+      if (pcmd->UserCallback != nullptr) {
+        pcmd->UserCallback(draw_list, pcmd);
+      } else {
+        // Project scissor/clipping rectangles into framebuffer space
+        ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x,
+                        (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+        ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x,
+                        (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+
+        // Clamp to viewport as SDL_SetGPUScissor() won't accept values that are
+        // off bounds
+        if (clip_min.x < 0.0f) {
+          clip_min.x = 0.0f;
+        }
+        if (clip_min.y < 0.0f) {
+          clip_min.y = 0.0f;
+        }
+        if (clip_max.x > fb_width) {
+          clip_max.x = (float)fb_width;
+        }
+        if (clip_max.y > fb_height) {
+          clip_max.y = (float)fb_height;
+        }
+        if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+          continue;
+
+        // Apply scissor/clipping rectangle
+        render_pass->SetScissor(clip_min.x, clip_min.y, clip_max.x - clip_min.x,
+                                clip_max.y - clip_min.y);
+
+        // Bind DescriptorSet with font or user texture
+        px::Array<px::TextureSamplerBinding> bindings(bd->InitInfo.Allocator);
+        bindings.push_back(
+            *reinterpret_cast<px::TextureSamplerBinding *>(pcmd->GetTexID()));
+        render_pass->BindFragmentSamplers(0, bindings);
+
+        // Draw
+        render_pass->DrawIndexedPrimitives(
+            pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset,
+            pcmd->VtxOffset + global_vtx_offset, 0);
+      }
+    }
+    global_idx_offset += draw_list->IdxBuffer.Size;
+    global_vtx_offset += draw_list->VtxBuffer.Size;
+  }
+  render_pass->SetScissor(0, 0, fb_width, fb_height);
 }
 
 IMGUI_IMPL_API void ImGui_ImplParanoixa_CreateDeviceObjects() {
@@ -219,8 +352,8 @@ IMGUI_IMPL_API void ImGui_ImplParanoixa_CreateDeviceObjects() {
 
   if (!bd->FontSampler) {
     // Bilinear sampling is required by default. Set 'io.Fonts->Flags |=
-    // ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex = false'
-    // to allow point/nearest sampling.
+    // ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex =
+    // false' to allow point/nearest sampling.
     px::Sampler::CreateInfo sampler_info = {};
     sampler_info.minFilter = px::Filter::Linear;
     sampler_info.magFilter = px::Filter::Linear;

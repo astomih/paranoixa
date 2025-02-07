@@ -23,6 +23,8 @@ SDL_GPUCompareOp CompareOpFrom(CompareOp compareOp);
 SDL_GPUBufferUsageFlags BufferUsageFrom(BufferUsage bufferUsage);
 SDL_GPUTransferBufferUsage
 TransferBufferUsageFrom(TransferBufferUsage transferBufferUsage);
+SDL_GPUBlendFactor BlendFactorFrom(BlendFactor blendFactor);
+SDL_GPUBlendOp BlendOpFrom(BlendOp blendOp);
 } // namespace convert
 } // namespace paranoixa::sdlgpu
 #endif // !PARANOIXA_SDLGPU_CONVERT_HPP

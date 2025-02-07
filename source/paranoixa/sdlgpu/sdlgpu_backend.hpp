@@ -151,11 +151,18 @@ public:
   void BindGraphicsPipeline(Ptr<px::GraphicsPipeline> pipeline) override;
   void BindVertexBuffers(uint32 startSlot,
                          const Array<BufferBinding> &bindings) override;
+  void BindIndexBuffer(const BufferBinding &binding,
+                       IndexElementSize indexElementSize) override;
   void
   BindFragmentSamplers(uint32 startSlot,
                        const Array<TextureSamplerBinding> &bindings) override;
+  void SetViewport(const Viewport &viewport) override;
+  void SetScissor(uint32 x, uint32 y, uint32 width, uint32 height) override;
   void DrawPrimitives(uint32 vertexCount, uint32 instanceCount,
                       uint32 firstVertex, uint32 firstInstance) override;
+  void DrawIndexedPrimitives(uint32 indexCount, uint32 instanceCount,
+                             uint32 firstIndex, uint32 vertexOffset,
+                             uint32 firstInstance) override;
 
 private:
   AllocatorPtr allocator;
@@ -176,6 +183,9 @@ public:
   Ptr<px::RenderPass>
   BeginRenderPass(const Array<px::ColorTargetInfo> &infos) override;
   void EndRenderPass(Ptr<px::RenderPass> renderPass) override;
+
+  void PushVertexUniformData(uint32 slot, const void *data,
+                             size_t size) override;
 
 private:
   SDL_GPUCommandBuffer *commandBuffer;
