@@ -157,7 +157,7 @@ public:
   BindFragmentSamplers(uint32 startSlot,
                        const Array<TextureSamplerBinding> &bindings) override;
   void SetViewport(const Viewport &viewport) override;
-  void SetScissor(uint32 x, uint32 y, uint32 width, uint32 height) override;
+  void SetScissor(int32 x, int32 y, int32 width, int32 height) override;
   void DrawPrimitives(uint32 vertexCount, uint32 instanceCount,
                       uint32 firstVertex, uint32 firstInstance) override;
   void DrawIndexedPrimitives(uint32 indexCount, uint32 instanceCount,

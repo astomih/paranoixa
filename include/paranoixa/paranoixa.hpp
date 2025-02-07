@@ -396,7 +396,7 @@ public:
   BindFragmentSamplers(uint32 slot,
                        const Array<TextureSamplerBinding> &bindings) = 0;
   virtual void SetViewport(const Viewport &viewport) = 0;
-  virtual void SetScissor(uint32 x, uint32 y, uint32 width, uint32 height) = 0;
+  virtual void SetScissor(int32 x, int32 y, int32 width, int32 height) = 0;
   virtual void DrawPrimitives(uint32 numVertices, uint32 numInstances,
                               uint32 firstVertex, uint32 firstInstance) = 0;
   virtual void DrawIndexedPrimitives(uint32 numIndices, uint32 numInstances,

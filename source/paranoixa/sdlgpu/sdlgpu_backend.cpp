@@ -133,7 +133,7 @@ void RenderPass::SetViewport(const Viewport &viewport) {
                         viewport.height, viewport.minDepth, viewport.maxDepth};
   SDL_SetGPUViewport(this->renderPass, &vp);
 }
-void RenderPass::SetScissor(uint32 x, uint32 y, uint32 width, uint32 height) {
+void RenderPass::SetScissor(int32 x, int32 y, int32 width, int32 height) {
   SDL_Rect rect = {x, y, width, height};
   SDL_SetGPUScissor(this->renderPass, &rect);
 }
