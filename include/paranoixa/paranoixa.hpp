@@ -27,7 +27,7 @@ std::unique_ptr<FileLoader> &GetFileLoader();
 
 enum class ShaderStage { Vertex, Fragment };
 enum class TransferBufferUsage { Upload, Download };
-enum class TextureFormat { R8G8B8A8_UNORM, B8G8R8A8_UNORM };
+enum class TextureFormat { Invalid, R8G8B8A8_UNORM, B8G8R8A8_UNORM };
 enum class TextureUsage { Sampler, ColorTarget, DepthStencilTarget };
 enum class TextureType { Texture2D, Texture3D };
 enum class BufferUsage { Vertex, Index, Indirect };
@@ -445,4 +445,5 @@ public:
   static AllocatorPtr CreateAllocator(size_t size);
 };
 } // namespace paranoixa
+namespace px = paranoixa;
 #endif

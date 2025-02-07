@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 
 project(paranoixa)
 add_subdirectory(source/phonon)
+add_subdirectory(source/imgui_backend)
 add_subdirectory(test)
 set(CMAKE_FOLDER "SDL3")
 set(SDL_SHARED OFF)
