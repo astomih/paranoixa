@@ -52,6 +52,9 @@ public:
   Array(AllocatorPtr allocator) : std::vector<T, STLAllocator<T>>(allocator) {}
 };
 
+using String =
+    std::basic_string<char, std::char_traits<char>, STLAllocator<char>>;
+
 // Hash map class
 template <typename K, typename V, typename Hash = std::hash<K>,
           typename Equal = std::equal_to<K>>

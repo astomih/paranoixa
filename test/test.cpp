@@ -149,11 +149,11 @@ int main() {
 
       {
 
-        CopyPass::TextureTransferInfo info{
+        TextureTransferInfo info{
             .transferBuffer = stagingTextureBuffer,
             .offset = 0,
         };
-        CopyPass::TextureRegion region{
+        TextureRegion region{
             .texture = texture,
             .width = textureCreateInfo.width,
             .height = textureCreateInfo.height,
@@ -162,11 +162,11 @@ int main() {
         copyPass->UploadTexture(info, region, false);
       }
       {
-        CopyPass::BufferTransferInfo location{
+        BufferTransferInfo location{
             .transferBuffer = stagingVertexBuffer,
             .offset = 0,
         };
-        CopyPass::BufferRegion region{
+        BufferRegion region{
             .buffer = vertexBuffer,
             .offset = 0,
             .size = vbci.size,
@@ -198,29 +198,22 @@ int main() {
       };
       Array<ColorTargetDescription> colorTargetDescriptions(allocator);
       colorTargetDescriptions.push_back(colorTargetDescription);
-      GraphicsPipeline::CreateInfo pipelineCreateInfo = {
-          .allocator = allocator,
-          .vertexShader = vs,
-          .fragmentShader = fs,
-          .vertexInputState =
-              VertexInputState{
-                  .vertexBufferDescriptions = vbDescs,
-                  .vertexAttributes = vertexAttributes,
-              },
-          .primitiveType = PrimitiveType::TriangleList,
-          .rasterizerState =
-              RasterizerState{
-                  .fillMode = FillMode::Solid,
-                  .cullMode = CullMode::None,
-                  .frontFace = FrontFace::Clockwise,
-              },
-          .multiSampleState = {},
-          .depthStencilState = {},
-          .targetInfo =
-              TargetInfo{
-                  .colorTargetDescriptions = colorTargetDescriptions,
-              },
-      };
+      GraphicsPipeline::CreateInfo pipelineCreateInfo{allocator};
+      pipelineCreateInfo.allocator = allocator;
+      pipelineCreateInfo.vertexShader = vs;
+      pipelineCreateInfo.fragmentShader = fs;
+      pipelineCreateInfo.vertexInputState = VertexInputState{allocator};
+      pipelineCreateInfo.vertexInputState.vertexBufferDescriptions = vbDescs;
+      pipelineCreateInfo.vertexInputState.vertexAttributes = vertexAttributes;
+      pipelineCreateInfo.primitiveType = PrimitiveType::TriangleList;
+      pipelineCreateInfo.rasterizerState.fillMode = FillMode::Solid;
+      pipelineCreateInfo.rasterizerState.cullMode = CullMode::None;
+      pipelineCreateInfo.rasterizerState.frontFace = FrontFace::Clockwise;
+      pipelineCreateInfo.multiSampleState = {};
+      pipelineCreateInfo.depthStencilState = {};
+      pipelineCreateInfo.targetInfo = {allocator};
+      pipelineCreateInfo.targetInfo.colorTargetDescriptions =
+          colorTargetDescriptions;
       auto pipeline = device->CreateGraphicsPipeline(pipelineCreateInfo);
 
       Sampler::CreateInfo samplerCI{};
@@ -238,21 +231,20 @@ int main() {
       auto cmdbuf = device->CreateCommandBuffer(commandBufferCI);
       auto swapchainTexture = device->AcquireSwapchainTexture(cmdbuf);
 
-      RenderPass::ColorTargetInfo colorTargetInfo = {
+      ColorTargetInfo colorTargetInfo = {
           .texture = swapchainTexture,
           .loadOp = LoadOp::Clear,
           .storeOp = StoreOp::Store,
       };
-      auto colorTargetInfos = Array<RenderPass::ColorTargetInfo>(allocator);
+      auto colorTargetInfos = Array<ColorTargetInfo>(allocator);
       colorTargetInfos.push_back(colorTargetInfo);
       auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
       renderPass->BindGraphicsPipeline(pipeline);
-      Array<RenderPass::BufferBinding> bindings(allocator);
+      Array<BufferBinding> bindings(allocator);
       bindings.push_back({vertexBuffer, 0});
 
       renderPass->BindVertexBuffers(0, bindings);
-      auto textureBindings =
-          Array<RenderPass::TextureSamplerBinding>(allocator);
+      auto textureBindings = Array<TextureSamplerBinding>(allocator);
       textureBindings.push_back({sampler, texture});
       renderPass->BindFragmentSamplers(0, textureBindings);
       renderPass->DrawPrimitives(6, 1, 0, 0);

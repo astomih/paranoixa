@@ -25,6 +25,7 @@ public:
 
 std::unique_ptr<FileLoader> &GetFileLoader();
 
+enum class ShaderFormat { SPIRV };
 enum class ShaderStage { Vertex, Fragment };
 enum class TransferBufferUsage { Upload, Download };
 enum class TextureFormat { Invalid, R8G8B8A8_UNORM, B8G8R8A8_UNORM };
@@ -61,12 +62,7 @@ struct VertexBufferDescription {
   VertexInputRate inputRate;
   uint32 instanceStepRate;
 };
-enum VertexElementFormat {
-  Float1,
-  Float2,
-  Float3,
-  Float4,
-};
+enum VertexElementFormat { Float1, Float2, Float3, Float4, UByte4_NORM };
 enum class LoadOp { Load, Clear, DontCare };
 enum class StoreOp { Store, DontCare };
 struct VertexAttribute {
@@ -76,6 +72,8 @@ struct VertexAttribute {
   uint32 offset;
 };
 struct VertexInputState {
+  VertexInputState(AllocatorPtr allocator)
+      : vertexBufferDescriptions(allocator), vertexAttributes(allocator) {}
   Array<VertexBufferDescription> vertexBufferDescriptions;
   Array<VertexAttribute> vertexAttributes;
 };
@@ -128,15 +126,22 @@ enum class BlendOp {
   Min,
   Max,
 };
+struct ColorComponent {
+  enum Type : uint8_t {
+    R = 1,
+    G = 2,
+    B = 4,
+    A = 8,
+  } type;
+  ColorComponent(unsigned int v) : type(static_cast<Type>(v)) {}
+  operator Type() { return type; }
+};
 struct RasterizerState {
   FillMode fillMode;
   CullMode cullMode;
   FrontFace frontFace;
-};
-struct MultiSampleState {
-  SampleCount sampleCount;
-  uint32 sampleMask;
-  bool enableMask;
+  bool enableDepthBias;
+  bool enableDepthClip;
 };
 struct DepthStencilState {
   CompareOp compareOp;
@@ -162,6 +167,9 @@ struct ColorTargetDescription {
   ColorTargetBlendState blendState;
 };
 struct TargetInfo {
+  TargetInfo(AllocatorPtr allocator)
+      : colorTargetDescriptions(allocator), depthStencilTargetFormat(nullptr),
+        hasDepthStencilTarget(false) {}
   Array<ColorTargetDescription> colorTargetDescriptions;
   const TextureFormat *depthStencilTargetFormat;
   bool hasDepthStencilTarget;
@@ -187,6 +195,45 @@ protected:
 
 private:
   CreateInfo createInfo;
+};
+struct TextureTransferInfo {
+  Ptr<class TransferBuffer> transferBuffer;
+  uint32 offset;
+};
+struct TextureRegion {
+  Ptr<class Texture> texture;
+  uint32 x, y, z;
+  uint32 width;
+  uint32 height;
+  uint32 depth;
+};
+struct BufferTransferInfo {
+  Ptr<class TransferBuffer> transferBuffer;
+  uint32 offset;
+};
+struct BufferRegion {
+  Ptr<class Buffer> buffer;
+  uint32 offset;
+  uint32 size;
+};
+struct ColorTargetInfo {
+  Ptr<class Texture> texture;
+  // clearColor
+  LoadOp loadOp;
+  StoreOp storeOp;
+};
+struct BufferBinding {
+  Ptr<class Buffer> buffer;
+  uint32 offset;
+};
+struct TextureSamplerBinding {
+  Ptr<class Sampler> sampler;
+  Ptr<class Texture> texture;
+};
+struct MultiSampleState {
+  SampleCount sampleCount;
+  uint32 sampleMask;
+  bool enableMask;
 };
 
 class Sampler {
@@ -258,8 +305,10 @@ public:
     size_t size;
     const void *data;
     const char *entrypoint;
+    ShaderFormat format;
     ShaderStage stage;
     uint32 numSamplers;
+    uint32 numStorageBuffers;
     uint32 numStorageTextures;
     uint32 numUniformBuffers;
   };
@@ -275,6 +324,9 @@ private:
 class GraphicsPipeline {
 public:
   struct CreateInfo {
+    CreateInfo(AllocatorPtr allocator)
+        : allocator(allocator), vertexInputState(allocator),
+          targetInfo(allocator) {}
     AllocatorPtr allocator;
     Ptr<Shader> vertexShader;
     Ptr<Shader> fragmentShader;
@@ -311,26 +363,6 @@ private:
 
 class CopyPass {
 public:
-  struct TextureTransferInfo {
-    Ptr<TransferBuffer> transferBuffer;
-    uint32 offset;
-  };
-  struct TextureRegion {
-    Ptr<Texture> texture;
-    uint32 x, y, z;
-    uint32 width;
-    uint32 height;
-    uint32 depth;
-  };
-  struct BufferTransferInfo {
-    Ptr<TransferBuffer> transferBuffer;
-    uint32 offset;
-  };
-  struct BufferRegion {
-    Ptr<Buffer> buffer;
-    uint32 offset;
-    uint32 size;
-  };
   virtual ~CopyPass() = default;
 
   virtual void UploadTexture(const TextureTransferInfo &src,
@@ -344,20 +376,6 @@ public:
 };
 class RenderPass {
 public:
-  struct ColorTargetInfo {
-    Ptr<Texture> texture;
-    // clearColor
-    LoadOp loadOp;
-    StoreOp storeOp;
-  };
-  struct BufferBinding {
-    Ptr<Buffer> buffer;
-    uint32 offset;
-  };
-  struct TextureSamplerBinding {
-    Ptr<Sampler> sampler;
-    Ptr<Texture> texture;
-  };
   virtual ~RenderPass() = default;
 
   virtual void BindGraphicsPipeline(Ptr<GraphicsPipeline> graphicsPipeline) = 0;
@@ -386,7 +404,7 @@ public:
   virtual void EndCopyPass(Ptr<class CopyPass> copyPass) = 0;
 
   virtual Ptr<class RenderPass>
-  BeginRenderPass(const Array<RenderPass::ColorTargetInfo> &infos) = 0;
+  BeginRenderPass(const Array<ColorTargetInfo> &infos) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
 
 protected:
@@ -426,6 +444,8 @@ public:
   virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) = 0;
   virtual Ptr<Texture>
   AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) = 0;
+
+  virtual String GetDriver() const = 0;
 
 private:
   CreateInfo createInfo;

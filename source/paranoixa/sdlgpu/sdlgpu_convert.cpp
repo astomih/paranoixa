@@ -79,6 +79,8 @@ SDL_GPUVertexElementFormat VertexElementFormatFrom(VertexElementFormat format) {
     return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
   case VertexElementFormat::Float4:
     return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+  case VertexElementFormat::UByte4_NORM:
+    return SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM;
   default:
     return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
   }

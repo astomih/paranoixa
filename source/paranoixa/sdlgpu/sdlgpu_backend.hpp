@@ -36,6 +36,7 @@ public:
   SubmitCommandBuffer(Ptr<px::CommandBuffer> commandBuffer) override;
   virtual Ptr<px::Texture>
   AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) override;
+  virtual String GetDriver() const override;
 
 private:
   SDL_GPUDevice *device;
@@ -173,7 +174,7 @@ public:
   Ptr<px::CopyPass> BeginCopyPass() override;
   void EndCopyPass(Ptr<px::CopyPass> copyPass) override;
   Ptr<px::RenderPass>
-  BeginRenderPass(const Array<px::RenderPass::ColorTargetInfo> &infos) override;
+  BeginRenderPass(const Array<px::ColorTargetInfo> &infos) override;
   void EndRenderPass(Ptr<px::RenderPass> renderPass) override;
 
 private:

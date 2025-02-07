@@ -121,8 +121,8 @@ Ptr<px::CopyPass> CommandBuffer::BeginCopyPass() {
 void CommandBuffer::EndCopyPass(Ptr<px::CopyPass> copyPass) {
   SDL_EndGPUCopyPass(DownCast<CopyPass>(copyPass)->GetNative());
 }
-Ptr<px::RenderPass> CommandBuffer::BeginRenderPass(
-    const Array<RenderPass::ColorTargetInfo> &infos) {
+Ptr<px::RenderPass>
+CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos) {
   Array<SDL_GPUColorTargetInfo> colorTargetInfos(GetCreateInfo().allocator);
   colorTargetInfos.resize(infos.size());
   for (int i = 0; i < infos.size(); ++i) {
@@ -328,6 +328,7 @@ Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
                                   *this, nativeTex, true);
   return texture;
 }
+String Device::GetDriver() const { return SDL_GetGPUDeviceDriver(device); }
 Texture::~Texture() {
   if (!isSwapchainTexture)
     SDL_ReleaseGPUTexture(device.GetNative(), texture);
