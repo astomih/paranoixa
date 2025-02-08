@@ -52,6 +52,17 @@ enum class CompareOp {
   GreaterOrEqual,
   Always
 };
+enum class StencilOp {
+  Invalid,
+  Keep,
+  Zero,
+  Replace,
+  IncrementAndClamp,
+  DecrementAndClamp,
+  Invert,
+  IncrementAndWrap,
+  DecrementAndWrap
+};
 enum VertexInputRate {
   Vertex,
   Instance,
@@ -144,13 +155,21 @@ struct RasterizerState {
   bool enableDepthBias;
   bool enableDepthClip;
 };
+struct StencilOpState {
+  StencilOp failOp;
+  StencilOp passOp;
+  StencilOp depthFailOp;
+  CompareOp compareOp;
+};
 struct DepthStencilState {
   CompareOp compareOp;
+  StencilOpState backStencilState;
+  StencilOpState frontStencilState;
+  uint8 compareMask;
+  uint8 writeMask;
   bool enableDepthTest;
   bool enableDepthWrite;
   bool enableStencilTest;
-  uint32 stencilReadMask;
-  uint32 stencilWriteMask;
 };
 struct ColorTargetBlendState {
   BlendFactor srcColorBlendFactor;

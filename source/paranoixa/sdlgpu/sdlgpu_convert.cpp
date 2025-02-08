@@ -196,6 +196,28 @@ SDL_GPUCompareOp CompareOpFrom(CompareOp compareOp) {
     return SDL_GPU_COMPAREOP_NEVER;
   }
 }
+SDL_GPUStencilOp StencilOpFrom(StencilOp op) {
+  switch (op) {
+  case StencilOp::Keep:
+    return SDL_GPU_STENCILOP_KEEP;
+  case StencilOp::Zero:
+    return SDL_GPU_STENCILOP_ZERO;
+  case StencilOp::Replace:
+    return SDL_GPU_STENCILOP_REPLACE;
+  case StencilOp::IncrementAndClamp:
+    return SDL_GPU_STENCILOP_INCREMENT_AND_CLAMP;
+  case StencilOp::DecrementAndClamp:
+    return SDL_GPU_STENCILOP_DECREMENT_AND_CLAMP;
+  case StencilOp::Invert:
+    return SDL_GPU_STENCILOP_INVERT;
+  case StencilOp::IncrementAndWrap:
+    return SDL_GPU_STENCILOP_INCREMENT_AND_WRAP;
+  case StencilOp::DecrementAndWrap:
+    return SDL_GPU_STENCILOP_DECREMENT_AND_WRAP;
+  default:
+    return SDL_GPU_STENCILOP_KEEP;
+  }
+}
 SDL_GPUBufferUsageFlags BufferUsageFrom(BufferUsage bufferUsage) {
   switch (bufferUsage) {
   case BufferUsage::Vertex:

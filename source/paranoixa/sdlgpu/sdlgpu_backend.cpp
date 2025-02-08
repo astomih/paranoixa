@@ -269,6 +269,7 @@ Ptr<px::Shader> Device::CreateShader(const Shader::CreateInfo &createInfo) {
   shaderCI.format = SDL_GPU_SHADERFORMAT_SPIRV;
   shaderCI.entrypoint = createInfo.entrypoint;
   shaderCI.num_samplers = createInfo.numSamplers;
+  shaderCI.num_storage_buffers = createInfo.numStorageBuffers;
   shaderCI.num_storage_textures = createInfo.numStorageTextures;
   shaderCI.num_uniform_buffers = createInfo.numUniformBuffers;
 
@@ -289,22 +290,64 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
       DownCast<Shader>(createInfo.vertexShader)->GetNative();
   pipelineCI.fragment_shader =
       DownCast<Shader>(createInfo.fragmentShader)->GetNative();
-  pipelineCI.rasterizer_state.fill_mode =
-      convert::FillModeFrom(createInfo.rasterizerState.fillMode);
-  pipelineCI.rasterizer_state.cull_mode =
-      convert::CullModeFrom(createInfo.rasterizerState.cullMode);
-  pipelineCI.rasterizer_state.front_face =
-      convert::FrontFaceFrom(createInfo.rasterizerState.frontFace);
-  pipelineCI.rasterizer_state.depth_bias_constant_factor =
-      createInfo.rasterizerState.depthBiasConstantFactor;
-  pipelineCI.rasterizer_state.depth_bias_clamp =
-      createInfo.rasterizerState.depthBiasClamp;
-  pipelineCI.rasterizer_state.depth_bias_slope_factor =
-      createInfo.rasterizerState.depthBiasSlopeFactor;
-  pipelineCI.rasterizer_state.enable_depth_bias =
-      createInfo.rasterizerState.enableDepthBias;
-  pipelineCI.rasterizer_state.enable_depth_clip =
-      createInfo.rasterizerState.enableDepthClip;
+  {
+
+    auto &rasterizerState = createInfo.rasterizerState;
+    auto &rasterizer_state = pipelineCI.rasterizer_state;
+    rasterizer_state.fill_mode =
+        convert::FillModeFrom(createInfo.rasterizerState.fillMode);
+    rasterizer_state.cull_mode =
+        convert::CullModeFrom(createInfo.rasterizerState.cullMode);
+    rasterizer_state.front_face =
+        convert::FrontFaceFrom(createInfo.rasterizerState.frontFace);
+    rasterizer_state.depth_bias_constant_factor =
+        rasterizerState.depthBiasConstantFactor;
+    rasterizer_state.depth_bias_clamp = rasterizerState.depthBiasClamp;
+    rasterizer_state.depth_bias_slope_factor =
+        rasterizerState.depthBiasSlopeFactor;
+    rasterizer_state.enable_depth_bias = rasterizerState.enableDepthBias;
+    rasterizer_state.enable_depth_clip = rasterizerState.enableDepthClip;
+  }
+  {
+    auto &multisample_state = pipelineCI.multisample_state;
+    auto &multiSampleState = createInfo.multiSampleState;
+    multisample_state.enable_mask = multiSampleState.enableMask;
+    multisample_state.sample_count =
+        convert::SampleCountFrom(multiSampleState.sampleCount);
+    multisample_state.sample_mask = multiSampleState.sampleMask;
+  }
+  {
+    auto &depth_stencil_state = pipelineCI.depth_stencil_state;
+    auto &depthStencilState = createInfo.depthStencilState;
+    depth_stencil_state.compare_op =
+        convert::CompareOpFrom(depthStencilState.compareOp);
+
+    depth_stencil_state.back_stencil_state.fail_op =
+        convert::StencilOpFrom(depthStencilState.backStencilState.failOp);
+    depth_stencil_state.back_stencil_state.pass_op =
+        convert::StencilOpFrom(depthStencilState.backStencilState.passOp);
+    depth_stencil_state.back_stencil_state.depth_fail_op =
+        convert::StencilOpFrom(depthStencilState.backStencilState.depthFailOp);
+    depth_stencil_state.back_stencil_state.compare_op =
+        convert::CompareOpFrom(depthStencilState.backStencilState.compareOp);
+
+    depth_stencil_state.front_stencil_state.fail_op =
+        convert::StencilOpFrom(depthStencilState.frontStencilState.failOp);
+    depth_stencil_state.front_stencil_state.pass_op =
+        convert::StencilOpFrom(depthStencilState.frontStencilState.passOp);
+    depth_stencil_state.front_stencil_state.depth_fail_op =
+        convert::StencilOpFrom(depthStencilState.frontStencilState.depthFailOp);
+    depth_stencil_state.front_stencil_state.compare_op =
+        convert::CompareOpFrom(depthStencilState.frontStencilState.compareOp);
+
+    depth_stencil_state.compare_mask = depthStencilState.compareMask;
+    depth_stencil_state.write_mask = depthStencilState.writeMask;
+    depth_stencil_state.enable_depth_test = depthStencilState.enableDepthTest;
+    depth_stencil_state.enable_depth_write = depthStencilState.enableDepthWrite;
+    depth_stencil_state.enable_stencil_test =
+        depthStencilState.enableStencilTest;
+  }
+
   pipelineCI.primitive_type =
       convert::PrimitiveTypeFrom(createInfo.primitiveType);
 
@@ -386,8 +429,9 @@ Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
 
   auto raw = DownCast<CommandBuffer>(commandBuffer);
   SDL_GPUTexture *nativeTex;
-  SDL_AcquireGPUSwapchainTexture(raw->GetNative(), window, &nativeTex, nullptr,
-                                 nullptr);
+  SDL_WaitAndAcquireGPUSwapchainTexture(raw->GetNative(), window, &nativeTex,
+                                        nullptr, nullptr);
+  assert(nativeTex);
 
   Texture::CreateInfo ci{};
   ci.allocator = commandBuffer->GetCreateInfo().allocator;

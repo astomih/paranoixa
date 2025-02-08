@@ -49,8 +49,6 @@ int main() {
       (void)io;
       io.ConfigFlags |=
           ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-      io.ConfigFlags |=
-          ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
 
       // Setup Dear ImGui style
       ImGui::StyleColorsDark();
@@ -250,58 +248,56 @@ int main() {
       samplerCI.addressModeW = AddressMode::ClampToEdge;
       auto sampler = device->CreateSampler(samplerCI);
 
-      CommandBuffer::CreateInfo commandBufferCI{};
-      commandBufferCI.allocator = allocator;
-      auto cmdbuf = device->CreateCommandBuffer(commandBufferCI);
-      auto swapchainTexture = device->AcquireSwapchainTexture(cmdbuf);
-
-      ColorTargetInfo colorTargetInfo = {
-          .texture = swapchainTexture,
-          .loadOp = LoadOp::Clear,
-          .storeOp = StoreOp::Store,
-      };
-      auto colorTargetInfos = Array<ColorTargetInfo>(allocator);
-      colorTargetInfos.push_back(colorTargetInfo);
-      // Start the Dear ImGui frame
-      ImGui_ImplParanoixa_NewFrame();
-      ImGui_ImplSDL3_NewFrame();
-      ImGui::NewFrame();
-      ImGui::ShowDemoWindow();
-      // Rendering
-      ImGui::Render();
-      ImDrawData *draw_data = ImGui::GetDrawData();
-      const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f ||
-                                 draw_data->DisplaySize.y <= 0.0f);
-
-      auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
-      renderPass->BindGraphicsPipeline(pipeline);
-      Array<BufferBinding> bindings(allocator);
-      bindings.push_back({vertexBuffer, 0});
-
-      renderPass->BindVertexBuffers(0, bindings);
-      auto textureBindings = Array<TextureSamplerBinding>(allocator);
-      textureBindings.push_back({sampler, texture});
-      renderPass->BindFragmentSamplers(0, textureBindings);
-      renderPass->DrawPrimitives(6, 1, 0, 0);
-
-      if (swapchainTexture != nullptr && !is_minimized) {
-        Imgui_ImplParanoixa_PrepareDrawData(draw_data, cmdbuf);
-
-        // Render ImGui
-        ImGui_ImplParanoixa_RenderDrawData(draw_data, cmdbuf, renderPass);
-      }
-      cmdbuf->EndRenderPass(renderPass);
-      device->SubmitCommandBuffer(cmdbuf);
-
+      Ptr<Texture> swapchainTexture = nullptr;
       bool running = true;
       while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+          ImGui_ImplSDL3_ProcessEvent(&event);
           if (event.type == SDL_EVENT_QUIT) {
             running = false;
             break;
           }
         }
+        CommandBuffer::CreateInfo commandBufferCI{};
+        commandBufferCI.allocator = allocator;
+        auto cmdbuf = device->CreateCommandBuffer(commandBufferCI);
+
+        swapchainTexture = device->AcquireSwapchainTexture(cmdbuf);
+
+        ColorTargetInfo colorTargetInfo = {
+            .texture = swapchainTexture,
+            .loadOp = LoadOp::Clear,
+            .storeOp = StoreOp::Store,
+        };
+        auto colorTargetInfos = Array<ColorTargetInfo>(allocator);
+        colorTargetInfos.push_back(colorTargetInfo);
+        // Start the Dear ImGui frame
+        ImGui_ImplParanoixa_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+        ImGui::Begin("Hello, world!");
+        ImGui::End();
+        // Rendering
+        ImGui::Render();
+        ImDrawData *draw_data = ImGui::GetDrawData();
+
+        Imgui_ImplParanoixa_PrepareDrawData(draw_data, cmdbuf);
+        auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
+        renderPass->BindGraphicsPipeline(pipeline);
+        Array<BufferBinding> bindings(allocator);
+        bindings.push_back({vertexBuffer, 0});
+        renderPass->BindVertexBuffers(0, bindings);
+        auto textureBindings = Array<TextureSamplerBinding>(allocator);
+        textureBindings.push_back({sampler, texture});
+        renderPass->BindFragmentSamplers(0, textureBindings);
+        renderPass->DrawPrimitives(6, 1, 0, 0);
+
+        // Render ImGui
+        ImGui_ImplParanoixa_RenderDrawData(draw_data, cmdbuf, renderPass);
+
+        cmdbuf->EndRenderPass(renderPass);
+        device->SubmitCommandBuffer(cmdbuf);
       }
     }
 

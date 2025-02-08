@@ -205,14 +205,14 @@ IMGUI_IMPL_API void ImGui_ImplParanoixa_NewFrame() {
   if (!bd->FontTexture)
     ImGui_ImplParanoixa_CreateFontsTexture();
 }
-static void CreateOrResizeBuffer(px::Ptr<px::Buffer> buffer, uint32_t *old_size,
-                                 uint32_t new_size, px::BufferUsage usage) {
+static void CreateOrResizeBuffer(px::Ptr<px::Buffer> &buffer,
+                                 uint32_t *old_size, uint32_t new_size,
+                                 px::BufferUsage usage) {
   ImGui_ImplParanoixa_Data *bd = ImGui_ImplParanoixa_GetBackendData();
   ImGui_ImplParanoixa_InitInfo *v = &bd->InitInfo;
 
   // Even though this is fairly rarely called.
   v->Device->WaitForGPUIdle();
-  buffer = nullptr;
 
   px::Buffer::CreateInfo buffer_info = {};
   buffer_info.allocator = v->Allocator;
@@ -245,9 +245,12 @@ Imgui_ImplParanoixa_PrepareDrawData(ImDrawData *draw_data,
   if (fd->VertexBuffer == nullptr || fd->VertexBufferSize < vertex_size)
     CreateOrResizeBuffer(fd->VertexBuffer, &fd->VertexBufferSize, vertex_size,
                          px::BufferUsage::Vertex);
+  IM_ASSERT(fd->VertexBuffer != nullptr &&
+            "Failed to create the vertex buffer");
   if (fd->IndexBuffer == nullptr || fd->IndexBufferSize < index_size)
     CreateOrResizeBuffer(fd->IndexBuffer, &fd->IndexBufferSize, index_size,
                          px::BufferUsage::Index);
+  IM_ASSERT(fd->IndexBuffer != nullptr && "Failed to create the index buffer");
 
   // FIXME: It feels like more code could be shared there.
   px::TransferBuffer::CreateInfo vertex_transferbuffer_info = {};
@@ -266,8 +269,7 @@ Imgui_ImplParanoixa_PrepareDrawData(ImDrawData *draw_data,
   auto index_transferbuffer =
       v->Device->CreateTransferBuffer(index_transferbuffer_info);
   IM_ASSERT(index_transferbuffer != nullptr &&
-            "Failed to create the index transfer buffer, call SDL_GetError() "
-            "for more information");
+            "Failed to create the index transfer buffer");
 
   ImDrawVert *vtx_dst = (ImDrawVert *)vertex_transferbuffer->Map(true);
   ImDrawIdx *idx_dst = (ImDrawIdx *)index_transferbuffer->Map(true);
@@ -428,8 +430,8 @@ ImGui_ImplParanoixa_RenderDrawData(ImDrawData *draw_data,
 
         // Bind DescriptorSet with font or user texture
         px::Array<px::TextureSamplerBinding> bindings(bd->InitInfo.Allocator);
-        bindings.push_back(
-            *reinterpret_cast<px::TextureSamplerBinding *>(pcmd->GetTexID()));
+        auto *binding = (px::TextureSamplerBinding *)pcmd->GetTexID();
+        bindings.push_back(*binding);
         render_pass->BindFragmentSamplers(0, bindings);
 
         // Draw

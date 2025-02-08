@@ -21,6 +21,7 @@ SDL_GPUFilter FilterFrom(Filter filter);
 SDL_GPUSamplerMipmapMode MipmapModeFrom(MipmapMode mipmapMode);
 SDL_GPUSamplerAddressMode AddressModeFrom(AddressMode addressMode);
 SDL_GPUCompareOp CompareOpFrom(CompareOp compareOp);
+SDL_GPUStencilOp StencilOpFrom(StencilOp op);
 SDL_GPUBufferUsageFlags BufferUsageFrom(BufferUsage bufferUsage);
 SDL_GPUTransferBufferUsage
 TransferBufferUsageFrom(TransferBufferUsage transferBufferUsage);
