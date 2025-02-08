@@ -75,7 +75,8 @@ Ptr<Backend> Paranoixa::CreateBackend(AllocatorPtr allocator,
 }
 AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
 #ifdef _MSC_VER
-  return MakeAllocatorPtr<TLSFAllocator>(size);
+  return MakeAllocatorPtr<StdAllocator>(size);
+  // return MakeAllocatorPtr<TLSFAllocator>(size);
 #else
   return MakeAllocatorPtr<StdAllocator>(size);
 #endif

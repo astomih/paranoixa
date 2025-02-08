@@ -37,6 +37,7 @@ static void Imgui_ImplParanoixa_CreateShaders() {
   auto driver = v->Device->GetDriver();
 
   px::Shader::CreateInfo vertex_shader_info = {};
+  vertex_shader_info.allocator = v->Allocator;
   vertex_shader_info.entrypoint = "main";
   vertex_shader_info.stage = px::ShaderStage::Vertex;
   vertex_shader_info.numUniformBuffers = 1;
@@ -45,6 +46,7 @@ static void Imgui_ImplParanoixa_CreateShaders() {
   vertex_shader_info.numSamplers = 0;
 
   px::Shader::CreateInfo fragment_shader_info = {};
+  fragment_shader_info.allocator = v->Allocator;
   fragment_shader_info.entrypoint = "main";
   fragment_shader_info.stage = px::ShaderStage::Fragment;
   fragment_shader_info.numSamplers = 1;
@@ -119,7 +121,7 @@ static void ImGui_ImplParanoixa_CreateGraphicsPipeline() {
   vertex_input_state.vertexBufferDescriptions = vertex_buffer_desc;
 
   px::RasterizerState rasterizer_state = {};
-  rasterizer_state.fillMode = px::FillMode::Solid;
+  rasterizer_state.fillMode = px::FillMode::Fill;
   rasterizer_state.cullMode = px::CullMode::None;
   rasterizer_state.frontFace = px::FrontFace::CounterClockwise;
   rasterizer_state.enableDepthBias = false;
@@ -155,6 +157,7 @@ static void ImGui_ImplParanoixa_CreateGraphicsPipeline() {
   target_info.hasDepthStencilTarget = false;
 
   px::GraphicsPipeline::CreateInfo pipeline_info = {v->Allocator};
+  pipeline_info.allocator = v->Allocator;
   pipeline_info.vertexShader = bd->VertexShader;
   pipeline_info.fragmentShader = bd->FragmentShader;
   pipeline_info.vertexInputState = vertex_input_state;
@@ -189,6 +192,7 @@ ImGui_ImplParanoixa_Init(ImGui_ImplParanoixa_InitInfo *info) {
   bd->InitInfo = *info;
 
   ImGui_ImplParanoixa_CreateDeviceObjects();
+  return true;
 }
 
 IMGUI_IMPL_API void ImGui_ImplParanoixa_Shutdown() {}
@@ -201,11 +205,105 @@ IMGUI_IMPL_API void ImGui_ImplParanoixa_NewFrame() {
   if (!bd->FontTexture)
     ImGui_ImplParanoixa_CreateFontsTexture();
 }
+static void CreateOrResizeBuffer(px::Ptr<px::Buffer> buffer, uint32_t *old_size,
+                                 uint32_t new_size, px::BufferUsage usage) {
+  ImGui_ImplParanoixa_Data *bd = ImGui_ImplParanoixa_GetBackendData();
+  ImGui_ImplParanoixa_InitInfo *v = &bd->InitInfo;
+
+  // Even though this is fairly rarely called.
+  v->Device->WaitForGPUIdle();
+  buffer = nullptr;
+
+  px::Buffer::CreateInfo buffer_info = {};
+  buffer_info.allocator = v->Allocator;
+  buffer_info.usage = usage;
+  buffer_info.size = new_size;
+  // buffer_info.props = 0;
+  buffer = v->Device->CreateBuffer(buffer_info);
+  *old_size = new_size;
+  IM_ASSERT(buffer != nullptr && "Failed to create GPU Buffer");
+}
 
 IMGUI_IMPL_API void
 Imgui_ImplParanoixa_PrepareDrawData(ImDrawData *draw_data,
                                     px::Ptr<px::CommandBuffer> command_buffer) {
-  return IMGUI_IMPL_API void();
+  // Avoid rendering when minimized, scale coordinates for retina displays
+  // (screen coordinates != framebuffer coordinates)
+  int fb_width =
+      (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+  int fb_height =
+      (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+  if (fb_width <= 0 || fb_height <= 0 || draw_data->TotalVtxCount <= 0)
+    return;
+
+  ImGui_ImplParanoixa_Data *bd = ImGui_ImplParanoixa_GetBackendData();
+  ImGui_ImplParanoixa_InitInfo *v = &bd->InitInfo;
+  ImGui_ImplParanoixa_FrameData *fd = &bd->MainWindowFrameData;
+
+  uint32_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
+  uint32_t index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+  if (fd->VertexBuffer == nullptr || fd->VertexBufferSize < vertex_size)
+    CreateOrResizeBuffer(fd->VertexBuffer, &fd->VertexBufferSize, vertex_size,
+                         px::BufferUsage::Vertex);
+  if (fd->IndexBuffer == nullptr || fd->IndexBufferSize < index_size)
+    CreateOrResizeBuffer(fd->IndexBuffer, &fd->IndexBufferSize, index_size,
+                         px::BufferUsage::Index);
+
+  // FIXME: It feels like more code could be shared there.
+  px::TransferBuffer::CreateInfo vertex_transferbuffer_info = {};
+  vertex_transferbuffer_info.allocator = v->Allocator;
+  vertex_transferbuffer_info.usage = px::TransferBufferUsage::Upload;
+  vertex_transferbuffer_info.size = vertex_size;
+  px::TransferBuffer::CreateInfo index_transferbuffer_info = {};
+  index_transferbuffer_info.allocator = v->Allocator;
+  index_transferbuffer_info.usage = px::TransferBufferUsage::Upload;
+  index_transferbuffer_info.size = index_size;
+
+  auto vertex_transferbuffer =
+      v->Device->CreateTransferBuffer(vertex_transferbuffer_info);
+  IM_ASSERT(vertex_transferbuffer != nullptr &&
+            "Failed to create the vertex transfer buffer");
+  auto index_transferbuffer =
+      v->Device->CreateTransferBuffer(index_transferbuffer_info);
+  IM_ASSERT(index_transferbuffer != nullptr &&
+            "Failed to create the index transfer buffer, call SDL_GetError() "
+            "for more information");
+
+  ImDrawVert *vtx_dst = (ImDrawVert *)vertex_transferbuffer->Map(true);
+  ImDrawIdx *idx_dst = (ImDrawIdx *)index_transferbuffer->Map(true);
+  for (int n = 0; n < draw_data->CmdListsCount; n++) {
+    const ImDrawList *draw_list = draw_data->CmdLists[n];
+    memcpy(vtx_dst, draw_list->VtxBuffer.Data,
+           draw_list->VtxBuffer.Size * sizeof(ImDrawVert));
+    memcpy(idx_dst, draw_list->IdxBuffer.Data,
+           draw_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+    vtx_dst += draw_list->VtxBuffer.Size;
+    idx_dst += draw_list->IdxBuffer.Size;
+  }
+  vertex_transferbuffer->Unmap();
+  index_transferbuffer->Unmap();
+
+  px::BufferTransferInfo vertex_buffer_location = {};
+  vertex_buffer_location.offset = 0;
+  vertex_buffer_location.transferBuffer = vertex_transferbuffer;
+  px::BufferTransferInfo index_buffer_location = {};
+  index_buffer_location.offset = 0;
+  index_buffer_location.transferBuffer = index_transferbuffer;
+
+  px::BufferRegion vertex_buffer_region = {};
+  vertex_buffer_region.buffer = fd->VertexBuffer;
+  vertex_buffer_region.offset = 0;
+  vertex_buffer_region.size = vertex_size;
+
+  px::BufferRegion index_buffer_region = {};
+  index_buffer_region.buffer = fd->IndexBuffer;
+  index_buffer_region.offset = 0;
+  index_buffer_region.size = index_size;
+
+  auto copy_pass = command_buffer->BeginCopyPass();
+  copy_pass->UploadBuffer(vertex_buffer_location, vertex_buffer_region, false);
+  copy_pass->UploadBuffer(index_buffer_location, index_buffer_region, false);
+  command_buffer->EndCopyPass(copy_pass);
 }
 static void ImGui_ImplParanoixa_SetupRenderState(
     ImDrawData *draw_data, px::Ptr<px::GraphicsPipeline> pipeline,
@@ -355,6 +453,7 @@ IMGUI_IMPL_API void ImGui_ImplParanoixa_CreateDeviceObjects() {
     // ImFontAtlasFlags_NoBakedLines' or 'style.AntiAliasedLinesUseTex =
     // false' to allow point/nearest sampling.
     px::Sampler::CreateInfo sampler_info = {};
+    sampler_info.allocator = v->Allocator;
     sampler_info.minFilter = px::Filter::Linear;
     sampler_info.magFilter = px::Filter::Linear;
     sampler_info.mipmapMode = px::MipmapMode::Linear;
@@ -379,12 +478,80 @@ IMGUI_IMPL_API void ImGui_ImplParanoixa_CreateDeviceObjects() {
   ImGui_ImplParanoixa_CreateFontsTexture();
 }
 
-IMGUI_IMPL_API void ImGui_ImplParanoixa_DestroyDeviceObjects() {
-  return IMGUI_IMPL_API void();
-}
+IMGUI_IMPL_API void ImGui_ImplParanoixa_DestroyDeviceObjects() {}
 
 IMGUI_IMPL_API void ImGui_ImplParanoixa_CreateFontsTexture() {
-  return IMGUI_IMPL_API void();
+  ImGuiIO &io = ImGui::GetIO();
+  ImGui_ImplParanoixa_Data *bd = ImGui_ImplParanoixa_GetBackendData();
+  ImGui_ImplParanoixa_InitInfo *v = &bd->InitInfo;
+
+  // Destroy existing texture (if any)
+  if (bd->FontTexture) {
+    v->Device->WaitForGPUIdle();
+    ImGui_ImplParanoixa_DestroyFontsTexture();
+  }
+
+  unsigned char *pixels;
+  int width, height;
+  io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+  uint32_t upload_size = width * height * 4 * sizeof(char);
+
+  // Create the Image:
+  {
+    px::Texture::CreateInfo texture_info = {};
+    texture_info.allocator = bd->InitInfo.Allocator;
+    texture_info.type = px::TextureType::Texture2D;
+    texture_info.format = px::TextureFormat::R8G8B8A8_UNORM;
+    texture_info.usage = px::TextureUsage::Sampler;
+    texture_info.width = width;
+    texture_info.height = height;
+    texture_info.layerCountOrDepth = 1;
+    texture_info.numLevels = 1;
+    texture_info.sampleCount = px::SampleCount::x1;
+
+    bd->FontTexture = v->Device->CreateTexture(texture_info);
+    IM_ASSERT(bd->FontTexture && "Failed to create font texture");
+  }
+
+  // Assign the texture to the TextureSamplerBinding
+  bd->FontBinding.texture = bd->FontTexture;
+
+  // Create all the upload structures and upload:
+  {
+    px::TransferBuffer::CreateInfo transferbuffer_info = {};
+    transferbuffer_info.allocator = v->Allocator;
+    transferbuffer_info.usage = px::TransferBufferUsage::Upload;
+    transferbuffer_info.size = upload_size;
+
+    px::Ptr<px::TransferBuffer> transferbuffer =
+        v->Device->CreateTransferBuffer(transferbuffer_info);
+    IM_ASSERT(transferbuffer != nullptr &&
+              "Failed to create font transfer buffer");
+
+    void *texture_ptr = transferbuffer->Map(false);
+    memcpy(texture_ptr, pixels, upload_size);
+    transferbuffer->Unmap();
+
+    px::TextureTransferInfo transfer_info = {};
+    transfer_info.offset = 0;
+    transfer_info.transferBuffer = transferbuffer;
+
+    px::TextureRegion texture_region = {};
+    texture_region.texture = bd->FontTexture;
+    texture_region.width = width;
+    texture_region.height = height;
+    texture_region.depth = 1;
+
+    px::Ptr<px::CommandBuffer> cmd =
+        v->Device->CreateCommandBuffer({bd->InitInfo.Allocator});
+    px::Ptr<px::CopyPass> copy_pass = cmd->BeginCopyPass();
+    copy_pass->UploadTexture(transfer_info, texture_region, false);
+    cmd->EndCopyPass(copy_pass);
+    v->Device->SubmitCommandBuffer(cmd);
+  }
+
+  // Store our identifier
+  io.Fonts->SetTexID((ImTextureID)&bd->FontBinding);
 }
 
 IMGUI_IMPL_API void ImGui_ImplParanoixa_DestroyFontsTexture() {

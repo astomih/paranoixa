@@ -86,8 +86,8 @@ enum class PrimitiveType {
 
 };
 enum class FillMode {
-  Solid,
-  Wireframe,
+  Fill,
+  Line,
 };
 enum class CullMode {
   None,
@@ -289,7 +289,7 @@ public:
 
   const CreateInfo &GetCreateInfo() const { return createInfo; }
 
-  virtual void *Map() = 0;
+  virtual void *Map(bool cycle) = 0;
   virtual void Unmap() = 0;
 
 protected:
@@ -463,6 +463,7 @@ public:
   virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) = 0;
   virtual Ptr<Texture>
   AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) = 0;
+  virtual void WaitForGPUIdle() = 0;
 
   virtual String GetDriver() const = 0;
 

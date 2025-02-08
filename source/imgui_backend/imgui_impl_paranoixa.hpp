@@ -18,7 +18,7 @@ IMGUI_IMPL_API void ImGui_ImplParanoixa_NewFrame();
 IMGUI_IMPL_API void
 Imgui_ImplParanoixa_PrepareDrawData(ImDrawData *draw_data,
                                     px::Ptr<px::CommandBuffer> command_buffer);
-IMGUI_IMPL_API void ImGui_ImplParanoxia_RenderDrawData(
+IMGUI_IMPL_API void ImGui_ImplParanoixa_RenderDrawData(
     ImDrawData *draw_data, px::Ptr<px::CommandBuffer> command_buffer,
     px::Ptr<px::RenderPass> render_pass,
     px::Ptr<px::GraphicsPipeline> pipeline = nullptr);

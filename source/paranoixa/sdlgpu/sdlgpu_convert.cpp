@@ -21,6 +21,17 @@ SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp) {
   }
   return SDL_GPU_STOREOP_STORE;
 }
+SDL_GPUFillMode FillModeFrom(FillMode fillMode) {
+  switch (fillMode) {
+  case FillMode::Fill:
+    return SDL_GPU_FILLMODE_FILL;
+  case FillMode::Line:
+    return SDL_GPU_FILLMODE_LINE;
+  default:
+    assert(false && "Invalid fill mode");
+    return SDL_GPU_FILLMODE_FILL;
+  }
+}
 SDL_GPUCullMode CullModeFrom(CullMode cullMode) {
   switch (cullMode) {
   case CullMode::None:

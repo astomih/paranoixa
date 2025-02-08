@@ -36,6 +36,7 @@ public:
   SubmitCommandBuffer(Ptr<px::CommandBuffer> commandBuffer) override;
   virtual Ptr<px::Texture>
   AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) override;
+  virtual void WaitForGPUIdle() override;
   virtual String GetDriver() const override;
 
 private:
@@ -81,7 +82,7 @@ public:
 
   inline SDL_GPUTransferBuffer *GetNative() { return transferBuffer; }
 
-  void *Map() override;
+  void *Map(bool cycle) override;
   void Unmap() override;
 
 private:

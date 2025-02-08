@@ -32,9 +32,18 @@ public:
   STLAllocator(const STLAllocator<U> &other) : allocator(other.allocator) {}
 
   T *allocate(std::size_t n) {
+    if (allocator == nullptr) {
+      return std::allocator<T>::allocate(n);
+    }
     return reinterpret_cast<T *>(allocator->Allocate(n * sizeof(T)));
   }
-  void deallocate(T *p, std::size_t size) noexcept { allocator->Free(p, size); }
+  void deallocate(T *p, std::size_t size) noexcept {
+    if (allocator == nullptr) {
+      std::allocator<T>::deallocate(p, size);
+      return;
+    }
+    allocator->Free(p, size);
+  }
 
   AllocatorPtr allocator;
 };

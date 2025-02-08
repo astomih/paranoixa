@@ -6,6 +6,7 @@ namespace paranoixa::sdlgpu {
 namespace convert {
 SDL_GPULoadOp LoadOpFrom(LoadOp loadOp);
 SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp);
+SDL_GPUFillMode FillModeFrom(FillMode fillMode);
 SDL_GPUCullMode CullModeFrom(CullMode cullMode);
 SDL_GPUFrontFace FrontFaceFrom(FrontFace frontFace);
 SDL_GPUPrimitiveType PrimitiveTypeFrom(PrimitiveType primitiveType);

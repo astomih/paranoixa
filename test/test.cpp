@@ -7,6 +7,9 @@
 #include <imgui.h>
 #include <imnodes.h>
 
+#include <backends/imgui_impl_sdl3.h>
+#include <imgui_impl_paranoixa.hpp>
+
 void MemoryAllocatorTest();
 void PtrTest();
 
@@ -21,7 +24,7 @@ int main() {
   // TODO: Add unit tests
   MemoryAllocatorTest();
   PtrTest();
-  auto allocator = Paranoixa::CreateAllocator(0x4000);
+  auto allocator = Paranoixa::CreateAllocator(0x8000);
   STLAllocator<int> stdAllocator{allocator};
   std::vector<int, STLAllocator<int>> vec({allocator});
   vec.push_back(1);
@@ -39,6 +42,28 @@ int main() {
       auto backend = Paranoixa::CreateBackend(allocator, GraphicsAPI::SDLGPU);
       auto device = backend->CreateDevice({allocator, true});
       device->ClaimWindow(window);
+      // Setup Dear ImGui context
+      IMGUI_CHECKVERSION();
+      ImGui::CreateContext();
+      ImGuiIO &io = ImGui::GetIO();
+      (void)io;
+      io.ConfigFlags |=
+          ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+      io.ConfigFlags |=
+          ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
+
+      // Setup Dear ImGui style
+      ImGui::StyleColorsDark();
+      // ImGui::StyleColorsLight();
+
+      // Setup Platform/Renderer backends
+      ImGui_ImplSDL3_InitForSDLGPU(window);
+      ImGui_ImplParanoixa_InitInfo init_info = {};
+      init_info.Allocator = allocator;
+      init_info.Device = device;
+      init_info.ColorTargetFormat = px::TextureFormat::B8G8R8A8_UNORM;
+      init_info.MSAASamples = px::SampleCount::x1;
+      ImGui_ImplParanoixa_Init(&init_info);
 
       std::vector<uint8_t> data;
       data.resize(surface->w * surface->h * 4);
@@ -75,7 +100,7 @@ int main() {
       };
       auto stagingTextureBuffer =
           device->CreateTransferBuffer(stagingTextureBufferCI);
-      auto mapped = stagingTextureBuffer->Map();
+      auto mapped = stagingTextureBuffer->Map(false);
       memcpy(mapped, data.data(), data.size());
       stagingTextureBuffer->Unmap();
 
@@ -139,7 +164,7 @@ int main() {
       };
       auto stagingVertexBuffer =
           device->CreateTransferBuffer(stagingVertexBufferCI);
-      mapped = stagingVertexBuffer->Map();
+      mapped = stagingVertexBuffer->Map(false);
       memcpy(mapped, triangleVerts, vbci.size);
       stagingVertexBuffer->Unmap();
 
@@ -202,11 +227,10 @@ int main() {
       pipelineCreateInfo.allocator = allocator;
       pipelineCreateInfo.vertexShader = vs;
       pipelineCreateInfo.fragmentShader = fs;
-      pipelineCreateInfo.vertexInputState = VertexInputState{allocator};
       pipelineCreateInfo.vertexInputState.vertexBufferDescriptions = vbDescs;
       pipelineCreateInfo.vertexInputState.vertexAttributes = vertexAttributes;
       pipelineCreateInfo.primitiveType = PrimitiveType::TriangleList;
-      pipelineCreateInfo.rasterizerState.fillMode = FillMode::Solid;
+      pipelineCreateInfo.rasterizerState.fillMode = FillMode::Fill;
       pipelineCreateInfo.rasterizerState.cullMode = CullMode::None;
       pipelineCreateInfo.rasterizerState.frontFace = FrontFace::Clockwise;
       pipelineCreateInfo.multiSampleState = {};
@@ -238,6 +262,17 @@ int main() {
       };
       auto colorTargetInfos = Array<ColorTargetInfo>(allocator);
       colorTargetInfos.push_back(colorTargetInfo);
+      // Start the Dear ImGui frame
+      ImGui_ImplParanoixa_NewFrame();
+      ImGui_ImplSDL3_NewFrame();
+      ImGui::NewFrame();
+      ImGui::ShowDemoWindow();
+      // Rendering
+      ImGui::Render();
+      ImDrawData *draw_data = ImGui::GetDrawData();
+      const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f ||
+                                 draw_data->DisplaySize.y <= 0.0f);
+
       auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
       renderPass->BindGraphicsPipeline(pipeline);
       Array<BufferBinding> bindings(allocator);
@@ -248,6 +283,13 @@ int main() {
       textureBindings.push_back({sampler, texture});
       renderPass->BindFragmentSamplers(0, textureBindings);
       renderPass->DrawPrimitives(6, 1, 0, 0);
+
+      if (swapchainTexture != nullptr && !is_minimized) {
+        Imgui_ImplParanoixa_PrepareDrawData(draw_data, cmdbuf);
+
+        // Render ImGui
+        ImGui_ImplParanoixa_RenderDrawData(draw_data, cmdbuf, renderPass);
+      }
       cmdbuf->EndRenderPass(renderPass);
       device->SubmitCommandBuffer(cmdbuf);
 

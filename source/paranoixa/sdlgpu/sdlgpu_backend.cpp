@@ -249,9 +249,9 @@ TransferBuffer::~TransferBuffer() {
   SDL_ReleaseGPUTransferBuffer(device.GetNative(), transferBuffer);
 }
 
-void *TransferBuffer::Map() {
+void *TransferBuffer::Map(bool cycle) {
   return SDL_MapGPUTransferBuffer(device.GetNative(), this->transferBuffer,
-                                  false);
+                                  cycle);
 }
 void TransferBuffer::Unmap() {
   SDL_UnmapGPUTransferBuffer(device.GetNative(), this->transferBuffer);
@@ -289,6 +289,8 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
       DownCast<Shader>(createInfo.vertexShader)->GetNative();
   pipelineCI.fragment_shader =
       DownCast<Shader>(createInfo.fragmentShader)->GetNative();
+  pipelineCI.rasterizer_state.fill_mode =
+      convert::FillModeFrom(createInfo.rasterizerState.fillMode);
   pipelineCI.rasterizer_state.cull_mode =
       convert::CullModeFrom(createInfo.rasterizerState.cullMode);
   pipelineCI.rasterizer_state.front_face =
@@ -323,10 +325,10 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
     blend.dst_alpha_blendfactor =
         convert::BlendFactorFrom(pxBlend.dstColorBlendFactor);
     blend.color_blend_op = convert::BlendOpFrom(pxBlend.colorBlendOp);
-    blend.src_alpha_blendfactor =
-        convert::BlendFactorFrom(pxBlend.srcAlphaBlendFactor);
-    blend.dst_alpha_blendfactor =
-        convert::BlendFactorFrom(pxBlend.dstAlphaBlendFactor);
+    blend.src_color_blendfactor =
+        convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
+    blend.dst_color_blendfactor =
+        convert::BlendFactorFrom(pxBlend.dstColorBlendFactor);
     blend.alpha_blend_op = convert::BlendOpFrom(pxBlend.alphaBlendOp);
     blend.color_write_mask = pxBlend.colorWriteMask;
     blend.enable_blend = pxBlend.enableBlend;
@@ -393,7 +395,10 @@ Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
                                   *this, nativeTex, true);
   return texture;
 }
-String Device::GetDriver() const { return SDL_GetGPUDeviceDriver(device); }
+void Device::WaitForGPUIdle() { SDL_WaitForGPUIdle(device); }
+String Device::GetDriver() const {
+  return String(SDL_GetGPUDeviceDriver(device), GetCreateInfo().allocator);
+}
 Texture::~Texture() {
   if (!isSwapchainTexture)
     SDL_ReleaseGPUTexture(device.GetNative(), texture);
