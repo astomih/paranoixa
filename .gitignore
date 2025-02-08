@@ -340,6 +340,9 @@ ASALocalRun/
 healthchecksdb
 
 # build
-[Bb]uild/
 [Ww]eb/
 *.dll
+build/vs2022/*
+!build/2022/.gitkeep
+build/clang/*
+!build/clang/.gitkeep
