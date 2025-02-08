@@ -509,11 +509,8 @@ void WebGPURenderer::InitializePipeline() {
 #endif
   shaderDesc.nextInChain = &wgslDesc.chain;
 
-  auto &fileLoader = GetFileLoader();
   std::vector<char> vertCode, fragCode;
   // load in plain
-  fileLoader->Load("res/shader.vert.wgsl", vertCode, std::ios::in);
-  fileLoader->Load("res/shader.frag.wgsl", fragCode, std::ios::in);
 
 #ifdef DAWN
   wgslDesc.code = {vertCode.data(), vertCode.size()};

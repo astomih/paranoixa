@@ -734,8 +734,6 @@ void D3d12uRenderer::PrepareTexture() {
       .NumElements = _countof(inputElementDesc),
   };
   std::vector<char> vsdata, psdata;
-  GetFileLoader()->Load("res/shader.vert.cso", vsdata);
-  GetFileLoader()->Load("res/shader.frag.cso", psdata);
   D3D12_SHADER_BYTECODE vs{
       .pShaderBytecode = vsdata.data(),
       .BytecodeLength = vsdata.size(),

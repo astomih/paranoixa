@@ -795,9 +795,6 @@ void VulkanRenderer::PrepareTriangle() {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
 
   std::vector<char> vertexShaderSpv, fragmentShaderSpv;
-  GetFileLoader()->Load("res/shader.vert.spv", vertexShaderSpv);
-  GetFileLoader()->Load("res/shader.frag.spv", fragmentShaderSpv);
-
   shaderStages = std::array<VkPipelineShaderStageCreateInfo, 2>{
       {{
            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -973,8 +970,6 @@ void VulkanRenderer::PrepareTexture() {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
 
   std::vector<char> vertexShaderSpv, fragmentShaderSpv;
-  GetFileLoader()->Load("res/shader.vert.spv", vertexShaderSpv);
-  GetFileLoader()->Load("res/shader.frag.spv", fragmentShaderSpv);
 
   shaderStages = std::array<VkPipelineShaderStageCreateInfo, 2>{
       {{

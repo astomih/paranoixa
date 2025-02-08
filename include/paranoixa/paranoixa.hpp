@@ -17,13 +17,6 @@ enum class GraphicsAPI {
   WebGPU,
   SDLGPU,
 };
-class FileLoader {
-public:
-  bool Load(const char *filePath, std::vector<char> &fileData,
-            std::ios_base::openmode openMode = std::ios::in | std::ios::binary);
-};
-
-std::unique_ptr<FileLoader> &GetFileLoader();
 
 enum class ShaderFormat { SPIRV };
 enum class ShaderStage { Vertex, Fragment };

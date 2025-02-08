@@ -16,6 +16,45 @@ void PtrTest();
 #ifndef _countof
 #define _countof(x) (sizeof(x) / sizeof(x[0]))
 #endif
+class FileLoader {
+public:
+  bool Load(const char *filePath, std::vector<char> &fileData,
+            std::ios_base::openmode openMode = std::ios::in | std::ios::binary);
+};
+
+std::unique_ptr<FileLoader> &GetFileLoader();
+
+static std::unique_ptr<FileLoader> gFileLoader = nullptr;
+
+std::unique_ptr<FileLoader> &GetFileLoader() {
+  if (gFileLoader == nullptr) {
+    gFileLoader = std::make_unique<FileLoader>();
+  }
+  return gFileLoader;
+}
+
+bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
+                      std::ios_base::openmode openMode) {
+  std::string openModeStr;
+
+  if (openMode & std::ios::in) {
+    openModeStr += "r";
+  }
+  if (openMode & std::ios::binary) {
+    openModeStr += "b";
+  }
+
+  auto file = SDL_IOFromFile(filePath, openModeStr.c_str());
+  size_t size;
+  void *data = SDL_LoadFile_IO(file, &size, true);
+
+  if (data) {
+    fileData.resize(size);
+    memcpy(fileData.data(), data, size);
+    return true;
+  }
+  return false;
+}
 
 int main() {
 

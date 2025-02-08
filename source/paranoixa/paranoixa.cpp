@@ -17,37 +17,6 @@
 #include <fstream>
 #include <iostream>
 namespace paranoixa {
-static std::unique_ptr<FileLoader> gFileLoader = nullptr;
-
-std::unique_ptr<FileLoader> &GetFileLoader() {
-  if (gFileLoader == nullptr) {
-    gFileLoader = std::make_unique<FileLoader>();
-  }
-  return gFileLoader;
-}
-
-bool FileLoader::Load(const char *filePath, std::vector<char> &fileData,
-                      std::ios_base::openmode openMode) {
-  std::string openModeStr;
-
-  if (openMode & std::ios::in) {
-    openModeStr += "r";
-  }
-  if (openMode & std::ios::binary) {
-    openModeStr += "b";
-  }
-
-  auto file = SDL_IOFromFile(filePath, openModeStr.c_str());
-  size_t size;
-  void *data = SDL_LoadFile_IO(file, &size, true);
-
-  if (data) {
-    fileData.resize(size);
-    memcpy(fileData.data(), data, size);
-    return true;
-  }
-  return false;
-}
 Ptr<Backend> Paranoixa::CreateBackend(AllocatorPtr allocator,
                                       const GraphicsAPI &api) {
 #ifndef __EMSCRIPTEN__
