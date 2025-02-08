@@ -1,1 +1,1 @@
- ../libparanoixa.a ../library/SDL/libSDL3.a -lm 
+ ../libparanoixa.a ../source/imgui_backend/libparanoixa_imgui_backend.a ../libparanoixa.a ../library/SDL/libSDL3.a -lm 
