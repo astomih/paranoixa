@@ -6,6 +6,7 @@ namespace paranoixa::sdlgpu {
 namespace convert {
 SDL_GPULoadOp LoadOpFrom(LoadOp loadOp);
 SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp);
+SDL_GPUFillMode FillModeFrom(FillMode fillMode);
 SDL_GPUCullMode CullModeFrom(CullMode cullMode);
 SDL_GPUFrontFace FrontFaceFrom(FrontFace frontFace);
 SDL_GPUPrimitiveType PrimitiveTypeFrom(PrimitiveType primitiveType);
@@ -20,9 +21,12 @@ SDL_GPUFilter FilterFrom(Filter filter);
 SDL_GPUSamplerMipmapMode MipmapModeFrom(MipmapMode mipmapMode);
 SDL_GPUSamplerAddressMode AddressModeFrom(AddressMode addressMode);
 SDL_GPUCompareOp CompareOpFrom(CompareOp compareOp);
+SDL_GPUStencilOp StencilOpFrom(StencilOp op);
 SDL_GPUBufferUsageFlags BufferUsageFrom(BufferUsage bufferUsage);
 SDL_GPUTransferBufferUsage
 TransferBufferUsageFrom(TransferBufferUsage transferBufferUsage);
+SDL_GPUBlendFactor BlendFactorFrom(BlendFactor blendFactor);
+SDL_GPUBlendOp BlendOpFrom(BlendOp blendOp);
 } // namespace convert
 } // namespace paranoixa::sdlgpu
 #endif // !PARANOIXA_SDLGPU_CONVERT_HPP

@@ -7,5 +7,5 @@ StdAllocator::~StdAllocator() {}
 
 void *StdAllocator::Allocate(const std::size_t &size) { return malloc(size); }
 
-void StdAllocator::Free(void *ptr, const std::size_t &size) { free(ptr); }
+void StdAllocator::Free(void *ptr, const std::size_t &size) { if(ptr)free(ptr); }
 } // namespace paranoixa

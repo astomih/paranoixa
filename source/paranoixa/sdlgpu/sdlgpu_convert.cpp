@@ -21,6 +21,17 @@ SDL_GPUStoreOp StoreOpFrom(StoreOp storeOp) {
   }
   return SDL_GPU_STOREOP_STORE;
 }
+SDL_GPUFillMode FillModeFrom(FillMode fillMode) {
+  switch (fillMode) {
+  case FillMode::Fill:
+    return SDL_GPU_FILLMODE_FILL;
+  case FillMode::Line:
+    return SDL_GPU_FILLMODE_LINE;
+  default:
+    assert(false && "Invalid fill mode");
+    return SDL_GPU_FILLMODE_FILL;
+  }
+}
 SDL_GPUCullMode CullModeFrom(CullMode cullMode) {
   switch (cullMode) {
   case CullMode::None:
@@ -58,6 +69,8 @@ SDL_GPUPrimitiveType PrimitiveTypeFrom(PrimitiveType primitiveType) {
 }
 SDL_GPUTextureFormat TextureFormatFrom(TextureFormat textureFormat) {
   switch (textureFormat) {
+  case TextureFormat::Invalid:
+    return SDL_GPU_TEXTUREFORMAT_INVALID;
   case TextureFormat::R8G8B8A8_UNORM:
     return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
   case TextureFormat::B8G8R8A8_UNORM:
@@ -77,6 +90,8 @@ SDL_GPUVertexElementFormat VertexElementFormatFrom(VertexElementFormat format) {
     return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
   case VertexElementFormat::Float4:
     return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+  case VertexElementFormat::UByte4_NORM:
+    return SDL_GPU_VERTEXELEMENTFORMAT_UBYTE4_NORM;
   default:
     return SDL_GPU_VERTEXELEMENTFORMAT_FLOAT;
   }
@@ -181,6 +196,28 @@ SDL_GPUCompareOp CompareOpFrom(CompareOp compareOp) {
     return SDL_GPU_COMPAREOP_NEVER;
   }
 }
+SDL_GPUStencilOp StencilOpFrom(StencilOp op) {
+  switch (op) {
+  case StencilOp::Keep:
+    return SDL_GPU_STENCILOP_KEEP;
+  case StencilOp::Zero:
+    return SDL_GPU_STENCILOP_ZERO;
+  case StencilOp::Replace:
+    return SDL_GPU_STENCILOP_REPLACE;
+  case StencilOp::IncrementAndClamp:
+    return SDL_GPU_STENCILOP_INCREMENT_AND_CLAMP;
+  case StencilOp::DecrementAndClamp:
+    return SDL_GPU_STENCILOP_DECREMENT_AND_CLAMP;
+  case StencilOp::Invert:
+    return SDL_GPU_STENCILOP_INVERT;
+  case StencilOp::IncrementAndWrap:
+    return SDL_GPU_STENCILOP_INCREMENT_AND_WRAP;
+  case StencilOp::DecrementAndWrap:
+    return SDL_GPU_STENCILOP_DECREMENT_AND_WRAP;
+  default:
+    return SDL_GPU_STENCILOP_KEEP;
+  }
+}
 SDL_GPUBufferUsageFlags BufferUsageFrom(BufferUsage bufferUsage) {
   switch (bufferUsage) {
   case BufferUsage::Vertex:
@@ -203,6 +240,54 @@ TransferBufferUsageFrom(TransferBufferUsage transferBufferUsage) {
     return SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD;
   default:
     return SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+  }
+}
+
+SDL_GPUBlendFactor BlendFactorFrom(BlendFactor blendFactor) {
+  switch (blendFactor) {
+  case BlendFactor::Zero:
+    return SDL_GPU_BLENDFACTOR_ZERO;
+  case BlendFactor::One:
+    return SDL_GPU_BLENDFACTOR_ONE;
+  case BlendFactor::SrcColor:
+    return SDL_GPU_BLENDFACTOR_SRC_COLOR;
+  case BlendFactor::OneMinusSrcColor:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR;
+  case BlendFactor::SrcAlpha:
+    return SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+  case BlendFactor::OneMinusSrcAlpha:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+  case BlendFactor::DstAlpha:
+    return SDL_GPU_BLENDFACTOR_DST_ALPHA;
+  case BlendFactor::OneMinusDstAlpha:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+  case BlendFactor::ConstantColor:
+    return SDL_GPU_BLENDFACTOR_CONSTANT_COLOR;
+  case BlendFactor::OneMinusConstantColor:
+    return SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR;
+  case BlendFactor::SrcAlphaSaturate:
+    return SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE;
+  default:
+    assert(false && "Invalid blend factor");
+    return SDL_GPU_BLENDFACTOR_ZERO;
+  }
+}
+
+SDL_GPUBlendOp BlendOpFrom(BlendOp blendOp) {
+  switch (blendOp) {
+  case BlendOp::Add:
+    return SDL_GPU_BLENDOP_ADD;
+  case BlendOp::Subtract:
+    return SDL_GPU_BLENDOP_SUBTRACT;
+  case BlendOp::ReverseSubtract:
+    return SDL_GPU_BLENDOP_REVERSE_SUBTRACT;
+  case BlendOp::Min:
+    return SDL_GPU_BLENDOP_MIN;
+  case BlendOp::Max:
+    return SDL_GPU_BLENDOP_MAX;
+  default:
+    assert(false && "Invalid blend operation");
+    return SDL_GPU_BLENDOP_ADD;
   }
 }
 

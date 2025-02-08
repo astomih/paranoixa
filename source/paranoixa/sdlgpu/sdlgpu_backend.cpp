@@ -94,6 +94,26 @@ void RenderPass::BindVertexBuffers(uint32 startSlot,
   SDL_BindGPUVertexBuffers(this->renderPass, startSlot, bufferBindings.data(),
                            bufferBindings.size());
 }
+void RenderPass::BindIndexBuffer(const BufferBinding &binding,
+                                 IndexElementSize indexElementSize) {
+  SDL_GPUBufferBinding bufferBinding = {};
+  bufferBinding.buffer = DownCast<Buffer>(binding.buffer)->GetNative();
+  bufferBinding.offset = binding.offset;
+  switch (indexElementSize) {
+  case IndexElementSize::Uint16:
+    SDL_BindGPUIndexBuffer(
+        this->renderPass, &bufferBinding,
+        SDL_GPUIndexElementSize::SDL_GPU_INDEXELEMENTSIZE_16BIT);
+    break;
+  case IndexElementSize::Uint32:
+    SDL_BindGPUIndexBuffer(
+        this->renderPass, &bufferBinding,
+        SDL_GPUIndexElementSize::SDL_GPU_INDEXELEMENTSIZE_32BIT);
+    break;
+  default:
+    assert(false && "Invalid index element size");
+  }
+}
 void RenderPass::BindFragmentSamplers(
     uint32 startSlot, const Array<TextureSamplerBinding> &bindings) {
   Array<SDL_GPUTextureSamplerBinding> samplerBindings(allocator);
@@ -108,10 +128,25 @@ void RenderPass::BindFragmentSamplers(
   SDL_BindGPUFragmentSamplers(this->renderPass, startSlot,
                               samplerBindings.data(), samplerBindings.size());
 }
+void RenderPass::SetViewport(const Viewport &viewport) {
+  SDL_GPUViewport vp = {viewport.x,      viewport.y,        viewport.width,
+                        viewport.height, viewport.minDepth, viewport.maxDepth};
+  SDL_SetGPUViewport(this->renderPass, &vp);
+}
+void RenderPass::SetScissor(int32 x, int32 y, int32 width, int32 height) {
+  SDL_Rect rect = {x, y, width, height};
+  SDL_SetGPUScissor(this->renderPass, &rect);
+}
 void RenderPass::DrawPrimitives(uint32 vertexCount, uint32 instanceCount,
                                 uint32 firstVertex, uint32 firstInstance) {
   SDL_DrawGPUPrimitives(this->renderPass, vertexCount, instanceCount,
                         firstVertex, firstInstance);
+}
+void RenderPass::DrawIndexedPrimitives(uint32 indexCount, uint32 instanceCount,
+                                       uint32 firstIndex, uint32 vertexOffset,
+                                       uint32 firstInstance) {
+  SDL_DrawGPUIndexedPrimitives(this->renderPass, indexCount, instanceCount,
+                               firstIndex, vertexOffset, firstInstance);
 }
 Ptr<px::CopyPass> CommandBuffer::BeginCopyPass() {
   auto *pass = SDL_BeginGPUCopyPass(this->commandBuffer);
@@ -121,8 +156,8 @@ Ptr<px::CopyPass> CommandBuffer::BeginCopyPass() {
 void CommandBuffer::EndCopyPass(Ptr<px::CopyPass> copyPass) {
   SDL_EndGPUCopyPass(DownCast<CopyPass>(copyPass)->GetNative());
 }
-Ptr<px::RenderPass> CommandBuffer::BeginRenderPass(
-    const Array<RenderPass::ColorTargetInfo> &infos) {
+Ptr<px::RenderPass>
+CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos) {
   Array<SDL_GPUColorTargetInfo> colorTargetInfos(GetCreateInfo().allocator);
   colorTargetInfos.resize(infos.size());
   for (int i = 0; i < infos.size(); ++i) {
@@ -140,6 +175,10 @@ Ptr<px::RenderPass> CommandBuffer::BeginRenderPass(
 }
 void CommandBuffer::EndRenderPass(Ptr<px::RenderPass> renderPass) {
   SDL_EndGPURenderPass(DownCast<RenderPass>(renderPass)->GetNative());
+}
+void CommandBuffer::PushVertexUniformData(uint32 slot, const void *data,
+                                          size_t size) {
+  SDL_PushGPUVertexUniformData(this->commandBuffer, slot, data, size);
 }
 GraphicsPipeline::~GraphicsPipeline() {
   SDL_ReleaseGPUGraphicsPipeline(device.GetNative(), pipeline);
@@ -210,9 +249,9 @@ TransferBuffer::~TransferBuffer() {
   SDL_ReleaseGPUTransferBuffer(device.GetNative(), transferBuffer);
 }
 
-void *TransferBuffer::Map() {
+void *TransferBuffer::Map(bool cycle) {
   return SDL_MapGPUTransferBuffer(device.GetNative(), this->transferBuffer,
-                                  false);
+                                  cycle);
 }
 void TransferBuffer::Unmap() {
   SDL_UnmapGPUTransferBuffer(device.GetNative(), this->transferBuffer);
@@ -230,6 +269,7 @@ Ptr<px::Shader> Device::CreateShader(const Shader::CreateInfo &createInfo) {
   shaderCI.format = SDL_GPU_SHADERFORMAT_SPIRV;
   shaderCI.entrypoint = createInfo.entrypoint;
   shaderCI.num_samplers = createInfo.numSamplers;
+  shaderCI.num_storage_buffers = createInfo.numStorageBuffers;
   shaderCI.num_storage_textures = createInfo.numStorageTextures;
   shaderCI.num_uniform_buffers = createInfo.numUniformBuffers;
 
@@ -250,10 +290,64 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
       DownCast<Shader>(createInfo.vertexShader)->GetNative();
   pipelineCI.fragment_shader =
       DownCast<Shader>(createInfo.fragmentShader)->GetNative();
-  pipelineCI.rasterizer_state.cull_mode =
-      convert::CullModeFrom(createInfo.rasterizerState.cullMode);
-  pipelineCI.rasterizer_state.front_face =
-      convert::FrontFaceFrom(createInfo.rasterizerState.frontFace);
+  {
+
+    auto &rasterizerState = createInfo.rasterizerState;
+    auto &rasterizer_state = pipelineCI.rasterizer_state;
+    rasterizer_state.fill_mode =
+        convert::FillModeFrom(createInfo.rasterizerState.fillMode);
+    rasterizer_state.cull_mode =
+        convert::CullModeFrom(createInfo.rasterizerState.cullMode);
+    rasterizer_state.front_face =
+        convert::FrontFaceFrom(createInfo.rasterizerState.frontFace);
+    rasterizer_state.depth_bias_constant_factor =
+        rasterizerState.depthBiasConstantFactor;
+    rasterizer_state.depth_bias_clamp = rasterizerState.depthBiasClamp;
+    rasterizer_state.depth_bias_slope_factor =
+        rasterizerState.depthBiasSlopeFactor;
+    rasterizer_state.enable_depth_bias = rasterizerState.enableDepthBias;
+    rasterizer_state.enable_depth_clip = rasterizerState.enableDepthClip;
+  }
+  {
+    auto &multisample_state = pipelineCI.multisample_state;
+    auto &multiSampleState = createInfo.multiSampleState;
+    multisample_state.enable_mask = multiSampleState.enableMask;
+    multisample_state.sample_count =
+        convert::SampleCountFrom(multiSampleState.sampleCount);
+    multisample_state.sample_mask = multiSampleState.sampleMask;
+  }
+  {
+    auto &depth_stencil_state = pipelineCI.depth_stencil_state;
+    auto &depthStencilState = createInfo.depthStencilState;
+    depth_stencil_state.compare_op =
+        convert::CompareOpFrom(depthStencilState.compareOp);
+
+    depth_stencil_state.back_stencil_state.fail_op =
+        convert::StencilOpFrom(depthStencilState.backStencilState.failOp);
+    depth_stencil_state.back_stencil_state.pass_op =
+        convert::StencilOpFrom(depthStencilState.backStencilState.passOp);
+    depth_stencil_state.back_stencil_state.depth_fail_op =
+        convert::StencilOpFrom(depthStencilState.backStencilState.depthFailOp);
+    depth_stencil_state.back_stencil_state.compare_op =
+        convert::CompareOpFrom(depthStencilState.backStencilState.compareOp);
+
+    depth_stencil_state.front_stencil_state.fail_op =
+        convert::StencilOpFrom(depthStencilState.frontStencilState.failOp);
+    depth_stencil_state.front_stencil_state.pass_op =
+        convert::StencilOpFrom(depthStencilState.frontStencilState.passOp);
+    depth_stencil_state.front_stencil_state.depth_fail_op =
+        convert::StencilOpFrom(depthStencilState.frontStencilState.depthFailOp);
+    depth_stencil_state.front_stencil_state.compare_op =
+        convert::CompareOpFrom(depthStencilState.frontStencilState.compareOp);
+
+    depth_stencil_state.compare_mask = depthStencilState.compareMask;
+    depth_stencil_state.write_mask = depthStencilState.writeMask;
+    depth_stencil_state.enable_depth_test = depthStencilState.enableDepthTest;
+    depth_stencil_state.enable_depth_write = depthStencilState.enableDepthWrite;
+    depth_stencil_state.enable_stencil_test =
+        depthStencilState.enableStencilTest;
+  }
+
   pipelineCI.primitive_type =
       convert::PrimitiveTypeFrom(createInfo.primitiveType);
 
@@ -266,6 +360,22 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
     SDL_GPUColorTargetDescription colorTargetDesc{};
     colorTargetDesc.format = convert::TextureFormatFrom(
         createInfo.targetInfo.colorTargetDescriptions[i].format);
+    auto &pxBlend = createInfo.targetInfo.colorTargetDescriptions[i].blendState;
+    auto &blend = colorTargetDesc.blend_state;
+
+    blend.src_alpha_blendfactor =
+        convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
+    blend.dst_alpha_blendfactor =
+        convert::BlendFactorFrom(pxBlend.dstColorBlendFactor);
+    blend.color_blend_op = convert::BlendOpFrom(pxBlend.colorBlendOp);
+    blend.src_color_blendfactor =
+        convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
+    blend.dst_color_blendfactor =
+        convert::BlendFactorFrom(pxBlend.dstColorBlendFactor);
+    blend.alpha_blend_op = convert::BlendOpFrom(pxBlend.alphaBlendOp);
+    blend.color_write_mask = pxBlend.colorWriteMask;
+    blend.enable_blend = pxBlend.enableBlend;
+    blend.enable_color_write_mask = pxBlend.enableColorWriteMask;
     colorTargetDescs[i] = colorTargetDesc;
   }
   pipelineCI.target_info.color_target_descriptions = colorTargetDescs.data();
@@ -319,14 +429,19 @@ Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
 
   auto raw = DownCast<CommandBuffer>(commandBuffer);
   SDL_GPUTexture *nativeTex;
-  SDL_AcquireGPUSwapchainTexture(raw->GetNative(), window, &nativeTex, nullptr,
-                                 nullptr);
+  SDL_WaitAndAcquireGPUSwapchainTexture(raw->GetNative(), window, &nativeTex,
+                                        nullptr, nullptr);
+  assert(nativeTex);
 
   Texture::CreateInfo ci{};
   ci.allocator = commandBuffer->GetCreateInfo().allocator;
   auto texture = MakePtr<Texture>(commandBuffer->GetCreateInfo().allocator, ci,
                                   *this, nativeTex, true);
   return texture;
+}
+void Device::WaitForGPUIdle() { SDL_WaitForGPUIdle(device); }
+String Device::GetDriver() const {
+  return String(SDL_GetGPUDeviceDriver(device), GetCreateInfo().allocator);
 }
 Texture::~Texture() {
   if (!isSwapchainTexture)

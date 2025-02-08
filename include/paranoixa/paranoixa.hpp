@@ -17,17 +17,11 @@ enum class GraphicsAPI {
   WebGPU,
   SDLGPU,
 };
-class FileLoader {
-public:
-  bool Load(const char *filePath, std::vector<char> &fileData,
-            std::ios_base::openmode openMode = std::ios::in | std::ios::binary);
-};
 
-std::unique_ptr<FileLoader> &GetFileLoader();
-
+enum class ShaderFormat { SPIRV };
 enum class ShaderStage { Vertex, Fragment };
 enum class TransferBufferUsage { Upload, Download };
-enum class TextureFormat { R8G8B8A8_UNORM, B8G8R8A8_UNORM };
+enum class TextureFormat { Invalid, R8G8B8A8_UNORM, B8G8R8A8_UNORM };
 enum class TextureUsage { Sampler, ColorTarget, DepthStencilTarget };
 enum class TextureType { Texture2D, Texture3D };
 enum class BufferUsage { Vertex, Index, Indirect };
@@ -51,6 +45,17 @@ enum class CompareOp {
   GreaterOrEqual,
   Always
 };
+enum class StencilOp {
+  Invalid,
+  Keep,
+  Zero,
+  Replace,
+  IncrementAndClamp,
+  DecrementAndClamp,
+  Invert,
+  IncrementAndWrap,
+  DecrementAndWrap
+};
 enum VertexInputRate {
   Vertex,
   Instance,
@@ -61,12 +66,7 @@ struct VertexBufferDescription {
   VertexInputRate inputRate;
   uint32 instanceStepRate;
 };
-enum VertexElementFormat {
-  Float1,
-  Float2,
-  Float3,
-  Float4,
-};
+enum VertexElementFormat { Float1, Float2, Float3, Float4, UByte4_NORM };
 enum class LoadOp { Load, Clear, DontCare };
 enum class StoreOp { Store, DontCare };
 struct VertexAttribute {
@@ -76,6 +76,8 @@ struct VertexAttribute {
   uint32 offset;
 };
 struct VertexInputState {
+  VertexInputState(AllocatorPtr allocator)
+      : vertexBufferDescriptions(allocator), vertexAttributes(allocator) {}
   Array<VertexBufferDescription> vertexBufferDescriptions;
   Array<VertexAttribute> vertexAttributes;
 };
@@ -88,8 +90,8 @@ enum class PrimitiveType {
 
 };
 enum class FillMode {
-  Solid,
-  Wireframe,
+  Fill,
+  Line,
 };
 enum class CullMode {
   None,
@@ -113,13 +115,7 @@ enum class BlendFactor {
   OneMinusDstAlpha,
   ConstantColor,
   OneMinusConstantColor,
-  ConstantAlpha,
-  OneMinusConstantAlpha,
   SrcAlphaSaturate,
-  Src1Color,
-  OneMinusSrc1Color,
-  Src1Alpha,
-  OneMinusSrc1Alpha,
 };
 enum class BlendOp {
   Add,
@@ -128,23 +124,45 @@ enum class BlendOp {
   Min,
   Max,
 };
+struct ColorComponent {
+  enum Type : uint8_t {
+    R = (1u << 0),
+    G = (1u << 1),
+    B = (1u << 2),
+    A = (1u << 3),
+
+    RGB = R | G | B,
+    RGBA = R | G | B | A,
+  } type;
+  ColorComponent(unsigned int v) : type(static_cast<Type>(v)) {}
+  operator Type() { return type; }
+};
+enum class IndexElementSize { Uint16, Uint32 };
 struct RasterizerState {
   FillMode fillMode;
   CullMode cullMode;
   FrontFace frontFace;
+  float depthBiasConstantFactor;
+  float depthBiasClamp;
+  float depthBiasSlopeFactor;
+  bool enableDepthBias;
+  bool enableDepthClip;
 };
-struct MultiSampleState {
-  SampleCount sampleCount;
-  uint32 sampleMask;
-  bool enableMask;
+struct StencilOpState {
+  StencilOp failOp;
+  StencilOp passOp;
+  StencilOp depthFailOp;
+  CompareOp compareOp;
 };
 struct DepthStencilState {
   CompareOp compareOp;
+  StencilOpState backStencilState;
+  StencilOpState frontStencilState;
+  uint8 compareMask;
+  uint8 writeMask;
   bool enableDepthTest;
   bool enableDepthWrite;
   bool enableStencilTest;
-  uint32 stencilReadMask;
-  uint32 stencilWriteMask;
 };
 struct ColorTargetBlendState {
   BlendFactor srcColorBlendFactor;
@@ -162,6 +180,9 @@ struct ColorTargetDescription {
   ColorTargetBlendState blendState;
 };
 struct TargetInfo {
+  TargetInfo(AllocatorPtr allocator)
+      : colorTargetDescriptions(allocator), depthStencilTargetFormat(nullptr),
+        hasDepthStencilTarget(false) {}
   Array<ColorTargetDescription> colorTargetDescriptions;
   const TextureFormat *depthStencilTargetFormat;
   bool hasDepthStencilTarget;
@@ -187,6 +208,45 @@ protected:
 
 private:
   CreateInfo createInfo;
+};
+struct TextureTransferInfo {
+  Ptr<class TransferBuffer> transferBuffer;
+  uint32 offset;
+};
+struct TextureRegion {
+  Ptr<class Texture> texture;
+  uint32 x, y, z;
+  uint32 width;
+  uint32 height;
+  uint32 depth;
+};
+struct BufferTransferInfo {
+  Ptr<class TransferBuffer> transferBuffer;
+  uint32 offset;
+};
+struct BufferRegion {
+  Ptr<class Buffer> buffer;
+  uint32 offset;
+  uint32 size;
+};
+struct ColorTargetInfo {
+  Ptr<class Texture> texture;
+  // clearColor
+  LoadOp loadOp;
+  StoreOp storeOp;
+};
+struct BufferBinding {
+  Ptr<class Buffer> buffer;
+  uint32 offset;
+};
+struct TextureSamplerBinding {
+  Ptr<class Sampler> sampler;
+  Ptr<class Texture> texture;
+};
+struct MultiSampleState {
+  SampleCount sampleCount;
+  uint32 sampleMask;
+  bool enableMask;
 };
 
 class Sampler {
@@ -241,7 +301,7 @@ public:
 
   const CreateInfo &GetCreateInfo() const { return createInfo; }
 
-  virtual void *Map() = 0;
+  virtual void *Map(bool cycle) = 0;
   virtual void Unmap() = 0;
 
 protected:
@@ -258,8 +318,10 @@ public:
     size_t size;
     const void *data;
     const char *entrypoint;
+    ShaderFormat format;
     ShaderStage stage;
     uint32 numSamplers;
+    uint32 numStorageBuffers;
     uint32 numStorageTextures;
     uint32 numUniformBuffers;
   };
@@ -275,6 +337,9 @@ private:
 class GraphicsPipeline {
 public:
   struct CreateInfo {
+    CreateInfo(AllocatorPtr allocator)
+        : allocator(allocator), vertexInputState(allocator),
+          targetInfo(allocator) {}
     AllocatorPtr allocator;
     Ptr<Shader> vertexShader;
     Ptr<Shader> fragmentShader;
@@ -311,26 +376,6 @@ private:
 
 class CopyPass {
 public:
-  struct TextureTransferInfo {
-    Ptr<TransferBuffer> transferBuffer;
-    uint32 offset;
-  };
-  struct TextureRegion {
-    Ptr<Texture> texture;
-    uint32 x, y, z;
-    uint32 width;
-    uint32 height;
-    uint32 depth;
-  };
-  struct BufferTransferInfo {
-    Ptr<TransferBuffer> transferBuffer;
-    uint32 offset;
-  };
-  struct BufferRegion {
-    Ptr<Buffer> buffer;
-    uint32 offset;
-    uint32 size;
-  };
   virtual ~CopyPass() = default;
 
   virtual void UploadTexture(const TextureTransferInfo &src,
@@ -342,32 +387,33 @@ public:
   virtual void DownloadBuffer(const BufferRegion &src,
                               const BufferTransferInfo &dst) = 0;
 };
+struct Viewport {
+  float x;
+  float y;
+  float width;
+  float height;
+  float minDepth;
+  float maxDepth;
+};
 class RenderPass {
 public:
-  struct ColorTargetInfo {
-    Ptr<Texture> texture;
-    // clearColor
-    LoadOp loadOp;
-    StoreOp storeOp;
-  };
-  struct BufferBinding {
-    Ptr<Buffer> buffer;
-    uint32 offset;
-  };
-  struct TextureSamplerBinding {
-    Ptr<Sampler> sampler;
-    Ptr<Texture> texture;
-  };
   virtual ~RenderPass() = default;
 
   virtual void BindGraphicsPipeline(Ptr<GraphicsPipeline> graphicsPipeline) = 0;
   virtual void BindVertexBuffers(uint32 slot,
                                  const Array<BufferBinding> &bindings) = 0;
+  virtual void BindIndexBuffer(const BufferBinding &binding,
+                               IndexElementSize indexElementSize) = 0;
   virtual void
   BindFragmentSamplers(uint32 slot,
                        const Array<TextureSamplerBinding> &bindings) = 0;
+  virtual void SetViewport(const Viewport &viewport) = 0;
+  virtual void SetScissor(int32 x, int32 y, int32 width, int32 height) = 0;
   virtual void DrawPrimitives(uint32 numVertices, uint32 numInstances,
                               uint32 firstVertex, uint32 firstInstance) = 0;
+  virtual void DrawIndexedPrimitives(uint32 numIndices, uint32 numInstances,
+                                     uint32 firstIndex, uint32 vertexOffset,
+                                     uint32 firstInstance) = 0;
 
 protected:
   RenderPass() = default;
@@ -386,8 +432,11 @@ public:
   virtual void EndCopyPass(Ptr<class CopyPass> copyPass) = 0;
 
   virtual Ptr<class RenderPass>
-  BeginRenderPass(const Array<RenderPass::ColorTargetInfo> &infos) = 0;
+  BeginRenderPass(const Array<ColorTargetInfo> &infos) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
+
+  virtual void PushVertexUniformData(uint32 slot, const void *data,
+                                     size_t size) = 0;
 
 protected:
   CommandBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
@@ -426,6 +475,9 @@ public:
   virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) = 0;
   virtual Ptr<Texture>
   AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) = 0;
+  virtual void WaitForGPUIdle() = 0;
+
+  virtual String GetDriver() const = 0;
 
 private:
   CreateInfo createInfo;
@@ -445,4 +497,5 @@ public:
   static AllocatorPtr CreateAllocator(size_t size);
 };
 } // namespace paranoixa
+namespace px = paranoixa;
 #endif
