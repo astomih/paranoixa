@@ -24,7 +24,7 @@ if(EMSCRIPTEN)
 		-s ASYNCIFY=1 \
 		--preload-file res")
 	add_executable(paranoixa_test test.cpp)
-	target_link_libraries(paranoixa_test PRIVATE paranoixa)
+	target_link_libraries(paranoixa_test PRIVATE paranoixa paranoixa_imgui_backend)
 	set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
 
