@@ -32,27 +32,27 @@ if(WIN32)
   find_package(Vulkan REQUIRED)
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
-    ${CMAKE_SOURCE_DIR}/library/imgui
-    ${CMAKE_SOURCE_DIR}/library/imnodes
-    ${CMAKE_SOURCE_DIR}/library/SDL/include
-    ${CMAKE_SOURCE_DIR}/include/paranoixa
-    ${CMAKE_SOURCE_DIR}/library/volk
-    ${CMAKE_SOURCE_DIR}/library/VulkanMemoryAllocator/include
-    ${CMAKE_SOURCE_DIR}/library/tlsf
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/imnodes
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/SDL/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/paranoixa
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/volk
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/VulkanMemoryAllocator/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/tlsf
   )
   file(GLOB_RECURSE
     PARANOIXA_INCLUDE_FILES
-    ${CMAKE_SOURCE_DIR}/include/paranoixa/*.hpp
-    ${CMAKE_SOURCE_DIR}/source/paranoixa/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/paranoixa/*.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/paranoixa/*.hpp
   )
 endif()
 
 if(EMSCRIPTEN)
   include_directories(
-    ${CMAKE_SOURCE_DIR}/include/paranoixa
-    ${CMAKE_SOURCE_DIR}/library/imgui
-    ${CMAKE_SOURCE_DIR}/library/imnodes
-    ${CMAKE_SOURCE_DIR}/library/tlsf
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/paranoixa
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/imnodes
+    ${CMAKE_CURRENT_SOURCE_DIR}/library/tlsf
   )
 endif()
 
