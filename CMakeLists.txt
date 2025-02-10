@@ -13,6 +13,7 @@ if(PARANOIXA_BUILD_SDL3)
   set(SDL_STATIC ON)
   add_subdirectory(library/SDL EXCLUDE_FROM_ALL)
   unset(CMAKE_FOLDER)
+  set(SDL3_LIBS SDL3::SDL3)
 endif()
 
 if(NOT MSVC)
@@ -107,14 +108,14 @@ if(WIN32)
   if(PARANOIXA_USE_WEBGPU)
     target_link_libraries(paranoixa PRIVATE
       webgpu
-      SDL3::SDL3
+      ${SDL3_LIBS}
       d3d12
       dxgi
     )
     target_copy_webgpu_binaries(paranoixa)
   else()
     target_link_libraries(paranoixa PRIVATE
-      SDL3::SDL3
+      ${SDL3_LIBS}
       d3d12
       dxgi
     )
