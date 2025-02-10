@@ -4,9 +4,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 set(CMAKE_CXX_STANDARD 23)
 
 project(paranoixa)
-add_subdirectory(source/phonon)
-add_subdirectory(source/imgui_backend)
-add_subdirectory(test)
 
 option(PARANOIXA_BUILD_SDL3 "Build SDL3" ON)
 
@@ -93,8 +90,11 @@ if(WIN32)
     library/imgui/backends/imgui_impl_wgpu.cpp
     source/paranoixa/*/*/*.cpp
   )
-  find_library(Vulkan SDL3)
 endif()
+
+add_subdirectory(source/phonon)
+add_subdirectory(source/imgui_backend)
+add_subdirectory(test)
 
 include_directories(${PARANOIXA_INCLUDE_DIRS})
 add_library(paranoixa STATIC ${SOURCE_FILES} ${PARANOIXA_INCLUDE_FILES})
