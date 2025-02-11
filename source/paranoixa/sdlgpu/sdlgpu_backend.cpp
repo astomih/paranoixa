@@ -364,9 +364,9 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
     auto &blend = colorTargetDesc.blend_state;
 
     blend.src_alpha_blendfactor =
-        convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
+        convert::BlendFactorFrom(pxBlend.srcAlphaBlendFactor);
     blend.dst_alpha_blendfactor =
-        convert::BlendFactorFrom(pxBlend.dstColorBlendFactor);
+        convert::BlendFactorFrom(pxBlend.dstAlphaBlendFactor);
     blend.color_blend_op = convert::BlendOpFrom(pxBlend.colorBlendOp);
     blend.src_color_blendfactor =
         convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
@@ -438,6 +438,13 @@ Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
   auto texture = MakePtr<Texture>(commandBuffer->GetCreateInfo().allocator, ci,
                                   *this, nativeTex, true);
   return texture;
+}
+px::TextureFormat Device::GetSwapchainFormat() const {
+  auto format = SDL_GetGPUSwapchainTextureFormat(device, window);
+  if (format == SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM) {
+    return px::TextureFormat::B8G8R8A8_UNORM;
+  }
+  return px::TextureFormat::Invalid;
 }
 void Device::WaitForGPUIdle() { SDL_WaitForGPUIdle(device); }
 String Device::GetDriver() const {

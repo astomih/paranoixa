@@ -36,6 +36,7 @@ public:
   SubmitCommandBuffer(Ptr<px::CommandBuffer> commandBuffer) override;
   virtual Ptr<px::Texture>
   AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) override;
+  virtual px::TextureFormat GetSwapchainFormat() const override;
   virtual void WaitForGPUIdle() override;
   virtual String GetDriver() const override;
 

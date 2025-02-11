@@ -35,7 +35,11 @@ Ptr<T> MakePtr(AllocatorPtr allocator, Args &&...args) {
   return std::allocate_shared<T>(stdAllocator, std::forward<Args>(args)...);
 }
 template <class T, class U> Ptr<T> DownCast(Ptr<U> ptr) {
+#ifdef PARANOIXA_BUILD_DEBUG
+  return std::dynamic_pointer_cast<T>(ptr);
+#else
   return std::static_pointer_cast<T>(ptr);
+#endif
 }
 
 // Type aliases

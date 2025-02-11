@@ -475,6 +475,7 @@ public:
   virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) = 0;
   virtual Ptr<Texture>
   AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) = 0;
+  virtual TextureFormat GetSwapchainFormat() const = 0;
   virtual void WaitForGPUIdle() = 0;
 
   virtual String GetDriver() const = 0;
