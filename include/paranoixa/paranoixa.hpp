@@ -339,7 +339,12 @@ public:
   struct CreateInfo {
     CreateInfo(AllocatorPtr allocator)
         : allocator(allocator), vertexInputState(allocator),
-          targetInfo(allocator) {}
+          targetInfo(allocator), vertexShader(nullptr), fragmentShader(nullptr),
+          primitiveType(PrimitiveType::TriangleList),
+          rasterizerState{FillMode::Fill, CullMode::None, FrontFace::Clockwise,
+                          0.0f,           0.0f,           0.0f,
+                          false,          false},
+          multiSampleState(), depthStencilState() {}
     AllocatorPtr allocator;
     Ptr<Shader> vertexShader;
     Ptr<Shader> fragmentShader;
