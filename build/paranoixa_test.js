@@ -39,7 +39,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /tmp/tmpw2b222gc.js
+// include: /tmp/tmpq87i5bzi.js
 
   if (!Module['expectedDataFileDownloads']) {
     Module['expectedDataFileDownloads'] = 0;
@@ -216,25 +216,25 @@ Module['FS_createPath']("/", "res", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/res/compileShader.py", "start": 0, "end": 1940}, {"filename": "/res/run.bat", "start": 1940, "end": 2082}, {"filename": "/res/shader.frag.cso", "start": 2082, "end": 6274}, {"filename": "/res/shader.frag.glsl", "start": 6274, "end": 6749}, {"filename": "/res/shader.frag.hlsl", "start": 6749, "end": 7050}, {"filename": "/res/shader.frag.spv", "start": 7050, "end": 7962}, {"filename": "/res/shader.frag.wgsl", "start": 7962, "end": 8699}, {"filename": "/res/shader.vert.cso", "start": 8699, "end": 12398}, {"filename": "/res/shader.vert.glsl", "start": 12398, "end": 12686}, {"filename": "/res/shader.vert.hlsl", "start": 12686, "end": 13096}, {"filename": "/res/shader.vert.spv", "start": 13096, "end": 14256}, {"filename": "/res/shader.vert.wgsl", "start": 14256, "end": 15151}, {"filename": "/res/texture.bmp", "start": 15151, "end": 4920165}], "remote_package_size": 4920165});
+    loadPackage({"files": [{"filename": "/res/compileShader.py", "start": 0, "end": 1940}, {"filename": "/res/run.bat", "start": 1940, "end": 2082}, {"filename": "/res/shader.frag.cso", "start": 2082, "end": 6274}, {"filename": "/res/shader.frag.glsl", "start": 6274, "end": 6610}, {"filename": "/res/shader.frag.hlsl", "start": 6610, "end": 6911}, {"filename": "/res/shader.frag.spv", "start": 6911, "end": 7491}, {"filename": "/res/shader.frag.wgsl", "start": 7491, "end": 8228}, {"filename": "/res/shader.slang", "start": 8228, "end": 9062}, {"filename": "/res/shader.vert.cso", "start": 9062, "end": 12761}, {"filename": "/res/shader.vert.glsl", "start": 12761, "end": 13481}, {"filename": "/res/shader.vert.hlsl", "start": 13481, "end": 13891}, {"filename": "/res/shader.vert.spv", "start": 13891, "end": 15595}, {"filename": "/res/shader.vert.wgsl", "start": 15595, "end": 16490}, {"filename": "/res/texture.bmp", "start": 16490, "end": 4921504}], "remote_package_size": 4921504});
 
   })();
 
-// end include: /tmp/tmpw2b222gc.js
-// include: /tmp/tmp4nzo9h8q.js
+// end include: /tmp/tmpq87i5bzi.js
+// include: /tmp/tmpmm9ujsjb.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /tmp/tmp4nzo9h8q.js
-// include: /tmp/tmp_v30fnwt.js
+  // end include: /tmp/tmpmm9ujsjb.js
+// include: /tmp/tmptk2hfeze.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /tmp/tmp_v30fnwt.js
+  // end include: /tmp/tmptk2hfeze.js
 
 
 // Sometimes an existing Module object exists with properties
