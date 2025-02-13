@@ -1,6 +1,6 @@
 #ifndef PARANOIXA_TLSF_ALLOCATOR_HPP
 #define PARANOIXA_TLSF_ALLOCATOR_HPP
-#include "allocator.hpp"
+#include "paranoixa.hpp"
 
 namespace paranoixa {
 class TLSFAllocator : public Allocator {
