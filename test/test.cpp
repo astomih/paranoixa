@@ -206,7 +206,7 @@ int main() {
       stagingVertexBuffer->Unmap();
 
       // transfer texture/vertex buffer to gpu
-      auto command = device->CreateCommandBuffer({allocator});
+      auto command = device->AcquireCommandBuffer({allocator});
       auto copyPass = command->BeginCopyPass();
 
       {
@@ -300,7 +300,7 @@ int main() {
         }
         CommandBuffer::CreateInfo commandBufferCI{};
         commandBufferCI.allocator = allocator;
-        auto cmdbuf = device->CreateCommandBuffer(commandBufferCI);
+        auto cmdbuf = device->AcquireCommandBuffer(commandBufferCI);
 
         swapchainTexture = device->AcquireSwapchainTexture(cmdbuf);
 

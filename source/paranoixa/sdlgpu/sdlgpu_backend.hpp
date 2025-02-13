@@ -27,7 +27,7 @@ public:
   virtual Ptr<px::Shader>
   CreateShader(const Shader::CreateInfo &createInfo) override;
   virtual Ptr<px::CommandBuffer>
-  CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) override;
+  AcquireCommandBuffer(const CommandBuffer::CreateInfo &createInfo) override;
   virtual Ptr<px::GraphicsPipeline> CreateGraphicsPipeline(
       const GraphicsPipeline::CreateInfo &createInfo) override;
   virtual Ptr<px::ComputePipeline>

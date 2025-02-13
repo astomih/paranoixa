@@ -582,7 +582,7 @@ public:
   virtual Ptr<ComputePipeline>
   CreateComputePipeline(const ComputePipeline::CreateInfo &createInfo) = 0;
   virtual Ptr<CommandBuffer>
-  CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) = 0;
+  AcquireCommandBuffer(const CommandBuffer::CreateInfo &createInfo) = 0;
   virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) = 0;
   virtual Ptr<Texture>
   AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) = 0;

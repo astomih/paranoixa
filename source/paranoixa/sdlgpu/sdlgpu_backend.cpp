@@ -277,7 +277,7 @@ Ptr<px::Shader> Device::CreateShader(const Shader::CreateInfo &createInfo) {
   return MakePtr<Shader>(createInfo.allocator, createInfo, *this, shader);
 }
 Ptr<px::CommandBuffer>
-Device::CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
+Device::AcquireCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
   SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(device);
   return MakePtr<CommandBuffer>(createInfo.allocator, createInfo,
                                 commandBuffer);
