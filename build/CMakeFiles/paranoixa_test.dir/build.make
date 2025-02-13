@@ -77,15 +77,15 @@ test/CMakeFiles/paranoixa_test.dir/test.cpp.o: test/CMakeFiles/paranoixa_test.di
 test/CMakeFiles/paranoixa_test.dir/test.cpp.o: /home/runner/work/paranoixa/paranoixa/test/test.cpp
 test/CMakeFiles/paranoixa_test.dir/test.cpp.o: test/CMakeFiles/paranoixa_test.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/runner/work/paranoixa/paranoixa/build/emscripten/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object test/CMakeFiles/paranoixa_test.dir/test.cpp.o"
-	cd /home/runner/work/paranoixa/paranoixa/build/emscripten/test && /home/runner/work/_temp/65f21421-b078-4bae-bd26-6f0fd74809dd/emsdk-main/upstream/emscripten/em++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT test/CMakeFiles/paranoixa_test.dir/test.cpp.o -MF CMakeFiles/paranoixa_test.dir/test.cpp.o.d -o CMakeFiles/paranoixa_test.dir/test.cpp.o -c /home/runner/work/paranoixa/paranoixa/test/test.cpp
+	cd /home/runner/work/paranoixa/paranoixa/build/emscripten/test && /home/runner/work/_temp/63ef9fd1-d3f6-438c-99c7-9723861bc8ca/emsdk-main/upstream/emscripten/em++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT test/CMakeFiles/paranoixa_test.dir/test.cpp.o -MF CMakeFiles/paranoixa_test.dir/test.cpp.o.d -o CMakeFiles/paranoixa_test.dir/test.cpp.o -c /home/runner/work/paranoixa/paranoixa/test/test.cpp
 
 test/CMakeFiles/paranoixa_test.dir/test.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/paranoixa_test.dir/test.cpp.i"
-	cd /home/runner/work/paranoixa/paranoixa/build/emscripten/test && /home/runner/work/_temp/65f21421-b078-4bae-bd26-6f0fd74809dd/emsdk-main/upstream/emscripten/em++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/runner/work/paranoixa/paranoixa/test/test.cpp > CMakeFiles/paranoixa_test.dir/test.cpp.i
+	cd /home/runner/work/paranoixa/paranoixa/build/emscripten/test && /home/runner/work/_temp/63ef9fd1-d3f6-438c-99c7-9723861bc8ca/emsdk-main/upstream/emscripten/em++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/runner/work/paranoixa/paranoixa/test/test.cpp > CMakeFiles/paranoixa_test.dir/test.cpp.i
 
 test/CMakeFiles/paranoixa_test.dir/test.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/paranoixa_test.dir/test.cpp.s"
-	cd /home/runner/work/paranoixa/paranoixa/build/emscripten/test && /home/runner/work/_temp/65f21421-b078-4bae-bd26-6f0fd74809dd/emsdk-main/upstream/emscripten/em++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/runner/work/paranoixa/paranoixa/test/test.cpp -o CMakeFiles/paranoixa_test.dir/test.cpp.s
+	cd /home/runner/work/paranoixa/paranoixa/build/emscripten/test && /home/runner/work/_temp/63ef9fd1-d3f6-438c-99c7-9723861bc8ca/emsdk-main/upstream/emscripten/em++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/runner/work/paranoixa/paranoixa/test/test.cpp -o CMakeFiles/paranoixa_test.dir/test.cpp.s
 
 # Object files for target paranoixa_test
 paranoixa_test_OBJECTS = \
