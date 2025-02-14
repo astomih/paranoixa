@@ -183,7 +183,8 @@ public:
   Ptr<px::CopyPass> BeginCopyPass() override;
   void EndCopyPass(Ptr<px::CopyPass> copyPass) override;
   Ptr<px::RenderPass>
-  BeginRenderPass(const Array<px::ColorTargetInfo> &infos) override;
+  BeginRenderPass(const Array<px::ColorTargetInfo> &infos,
+                  const DepthStencilTargetInfo &depthStencilInfo) override;
   void EndRenderPass(Ptr<px::RenderPass> renderPass) override;
 
   void PushVertexUniformData(uint32 slot, const void *data,

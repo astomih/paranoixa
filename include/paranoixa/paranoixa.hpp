@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <print>
 #include <type_traits>
@@ -127,7 +126,12 @@ enum class GraphicsAPI {
 enum class ShaderFormat { SPIRV };
 enum class ShaderStage { Vertex, Fragment };
 enum class TransferBufferUsage { Upload, Download };
-enum class TextureFormat { Invalid, R8G8B8A8_UNORM, B8G8R8A8_UNORM };
+enum class TextureFormat {
+  Invalid,
+  R8G8B8A8_UNORM,
+  B8G8R8A8_UNORM,
+  D32_FLOAT_S8_UINT
+};
 enum class TextureUsage { Sampler, ColorTarget, DepthStencilTarget };
 enum class TextureType { Texture2D, Texture3D };
 enum class BufferUsage { Vertex, Index, Indirect };
@@ -287,10 +291,11 @@ struct ColorTargetDescription {
 };
 struct TargetInfo {
   TargetInfo(AllocatorPtr allocator)
-      : colorTargetDescriptions(allocator), depthStencilTargetFormat(nullptr),
+      : colorTargetDescriptions(allocator),
+        depthStencilTargetFormat(TextureFormat::Invalid),
         hasDepthStencilTarget(false) {}
   Array<ColorTargetDescription> colorTargetDescriptions;
-  const TextureFormat *depthStencilTargetFormat;
+  TextureFormat depthStencilTargetFormat;
   bool hasDepthStencilTarget;
 };
 class Device;
@@ -340,6 +345,16 @@ struct ColorTargetInfo {
   // clearColor
   LoadOp loadOp;
   StoreOp storeOp;
+};
+struct DepthStencilTargetInfo {
+  Ptr<class Texture> texture;
+  float clearDepth;
+  LoadOp loadOp;
+  StoreOp storeOp;
+  LoadOp stencilLoadOp;
+  StoreOp stencilStoreOp;
+  bool cycle;
+  uint8 clearStencil;
 };
 struct BufferBinding {
   Ptr<class Buffer> buffer;
@@ -543,7 +558,8 @@ public:
   virtual void EndCopyPass(Ptr<class CopyPass> copyPass) = 0;
 
   virtual Ptr<class RenderPass>
-  BeginRenderPass(const Array<ColorTargetInfo> &infos) = 0;
+  BeginRenderPass(const Array<ColorTargetInfo> &infos,
+                  const DepthStencilTargetInfo &depthStencilInfo) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
 
   virtual void PushVertexUniformData(uint32 slot, const void *data,

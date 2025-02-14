@@ -1,9 +1,12 @@
+#include "paranoixa.hpp"
 #ifndef EMSCRIPTEN
 #include "sdlgpu_backend.hpp"
 #include "sdlgpu_convert.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
+
+#include <iostream>
 
 namespace paranoixa::sdlgpu {
 Ptr<px::Device> Backend::CreateDevice(const Device::CreateInfo &createInfo) {
@@ -157,7 +160,8 @@ void CommandBuffer::EndCopyPass(Ptr<px::CopyPass> copyPass) {
   SDL_EndGPUCopyPass(DownCast<CopyPass>(copyPass)->GetNative());
 }
 Ptr<px::RenderPass>
-CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos) {
+CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos,
+                               const DepthStencilTargetInfo &depthStencilInfo) {
   Array<SDL_GPUColorTargetInfo> colorTargetInfos(GetCreateInfo().allocator);
   colorTargetInfos.resize(infos.size());
   for (int i = 0; i < infos.size(); ++i) {
@@ -168,8 +172,25 @@ CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos) {
     colorTargetInfos[i].store_op = convert::StoreOpFrom(infos[i].storeOp);
     colorTargetInfos[i].clear_color = {0, 0, 0, 0};
   }
+  SDL_GPUDepthStencilTargetInfo depthStencilTarget{};
+  if (depthStencilInfo.texture != nullptr) {
+    depthStencilTarget.texture =
+        DownCast<Texture>(depthStencilInfo.texture)->GetNative();
+    depthStencilTarget.clear_depth = depthStencilInfo.clearDepth;
+    depthStencilTarget.load_op = convert::LoadOpFrom(depthStencilInfo.loadOp);
+    depthStencilTarget.store_op =
+        convert::StoreOpFrom(depthStencilInfo.storeOp);
+    depthStencilTarget.stencil_load_op =
+        convert::LoadOpFrom(depthStencilInfo.stencilLoadOp);
+    depthStencilTarget.stencil_store_op =
+        convert::StoreOpFrom(depthStencilInfo.stencilStoreOp);
+    depthStencilTarget.cycle = depthStencilInfo.cycle;
+    depthStencilTarget.clear_stencil = depthStencilInfo.clearStencil;
+  }
+
   auto *renderPass = SDL_BeginGPURenderPass(
-      commandBuffer, colorTargetInfos.data(), colorTargetInfos.size(), NULL);
+      commandBuffer, colorTargetInfos.data(), colorTargetInfos.size(),
+      depthStencilInfo.texture ? &depthStencilTarget : nullptr);
   return MakePtr<RenderPass>(GetCreateInfo().allocator,
                              GetCreateInfo().allocator, *this, renderPass);
 }
@@ -380,6 +401,10 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
   }
   pipelineCI.target_info.color_target_descriptions = colorTargetDescs.data();
   pipelineCI.target_info.num_color_targets = colorTargetDescs.size();
+  pipelineCI.target_info.has_depth_stencil_target =
+      createInfo.targetInfo.hasDepthStencilTarget;
+  pipelineCI.target_info.depth_stencil_format = convert::TextureFormatFrom(
+      createInfo.targetInfo.depthStencilTargetFormat);
   pipelineCI.vertex_input_state.num_vertex_attributes =
       createInfo.vertexInputState.vertexAttributes.size();
   pipelineCI.vertex_input_state.num_vertex_buffers =

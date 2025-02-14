@@ -10,6 +10,8 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui_impl_paranoixa.hpp>
 
+#include <iostream>
+
 void MemoryAllocatorTest();
 void PtrTest();
 
@@ -322,7 +324,7 @@ int main() {
         ImDrawData *draw_data = ImGui::GetDrawData();
 
         Imgui_ImplParanoixa_PrepareDrawData(draw_data, cmdbuf);
-        auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
+        auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos, {});
         renderPass->BindGraphicsPipeline(pipeline);
         Array<BufferBinding> bindings(allocator);
         bindings.push_back({vertexBuffer, 0});
