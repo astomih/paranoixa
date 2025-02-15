@@ -572,13 +572,12 @@ private:
   CreateInfo createInfo;
 };
 
-class Device {
+class Device : public std::enable_shared_from_this<Device> {
 public:
   struct CreateInfo {
     AllocatorPtr allocator;
     bool debugMode;
   };
-  Device(const CreateInfo &createInfo) : createInfo(createInfo) {}
   virtual ~Device() = default;
   const CreateInfo &GetCreateInfo() const { return createInfo; }
 
@@ -606,6 +605,10 @@ public:
   virtual void WaitForGPUIdle() = 0;
 
   virtual String GetDriver() const = 0;
+
+protected:
+  Device(const CreateInfo &createInfo) : createInfo(createInfo) {}
+  Ptr<Device> GetPtr() { return shared_from_this(); }
 
 private:
   CreateInfo createInfo;

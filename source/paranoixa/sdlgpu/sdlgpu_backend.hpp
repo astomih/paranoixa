@@ -1,3 +1,4 @@
+#include <memory>
 #ifndef EMSCRIPTEN
 #ifndef PARANOIXA_SDLGPU_RENDERER_HPP
 #define PARANOIXA_SDLGPU_RENDERER_HPP
@@ -39,6 +40,9 @@ public:
   virtual px::TextureFormat GetSwapchainFormat() const override;
   virtual void WaitForGPUIdle() override;
   virtual String GetDriver() const override;
+  std::shared_ptr<Device> Get() {
+    return std::dynamic_pointer_cast<Device>(GetPtr());
+  }
 
 private:
   SDL_GPUDevice *device;
@@ -46,8 +50,8 @@ private:
 };
 class Texture : public px::Texture {
 public:
-  Texture(const CreateInfo &createInfo, Device &device, SDL_GPUTexture *texture,
-          bool isSwapchainTexture = false)
+  Texture(const CreateInfo &createInfo, const Ptr<Device> &device,
+          SDL_GPUTexture *texture, bool isSwapchainTexture = false)
       : px::Texture(createInfo), device(device), texture(texture),
         isSwapchainTexture(isSwapchainTexture) {}
   virtual ~Texture() override;
@@ -55,27 +59,28 @@ public:
   inline SDL_GPUTexture *GetNative() const { return texture; }
 
 private:
-  Device &device;
+  Ptr<Device> device;
   SDL_GPUTexture *texture;
   bool isSwapchainTexture;
 };
 
 class Sampler : public px::Sampler {
 public:
-  Sampler(const CreateInfo &createInfo, Device &device, SDL_GPUSampler *sampler)
+  Sampler(const CreateInfo &createInfo, const Ptr<Device> &device,
+          SDL_GPUSampler *sampler)
       : px::Sampler(createInfo), device(device), sampler(sampler) {}
   ~Sampler() override;
 
   inline SDL_GPUSampler *GetNative() const { return sampler; }
 
 private:
-  Device &device;
+  Ptr<Device> device;
   SDL_GPUSampler *sampler;
 };
 
 class TransferBuffer : public px::TransferBuffer {
 public:
-  TransferBuffer(const CreateInfo &createInfo, Device &device,
+  TransferBuffer(const CreateInfo &createInfo, const Ptr<Device> &device,
                  SDL_GPUTransferBuffer *transferBuffer)
       : px::TransferBuffer(createInfo), device(device),
         transferBuffer(transferBuffer) {}
@@ -87,19 +92,20 @@ public:
   void Unmap() override;
 
 private:
-  Device &device;
+  Ptr<Device> device;
   SDL_GPUTransferBuffer *transferBuffer;
 };
 class Buffer : public px::Buffer {
 public:
-  Buffer(const CreateInfo &createInfo, Device &device, SDL_GPUBuffer *buffer)
+  Buffer(const CreateInfo &createInfo, const Ptr<Device> &device,
+         SDL_GPUBuffer *buffer)
       : px::Buffer(createInfo), device(device), buffer(buffer) {}
   ~Buffer() override;
 
   inline SDL_GPUBuffer *GetNative() { return buffer; }
 
 private:
-  Device &device;
+  Ptr<Device> device;
   SDL_GPUBuffer *buffer;
 };
 class Backend : public px::Backend {
@@ -109,14 +115,15 @@ public:
 };
 class Shader : public px::Shader {
 public:
-  Shader(const CreateInfo &createInfo, Device &device, SDL_GPUShader *shader)
+  Shader(const CreateInfo &createInfo, const Ptr<Device> &device,
+         SDL_GPUShader *shader)
       : px::Shader(createInfo), device(device), shader(shader) {}
   ~Shader() override;
 
   inline SDL_GPUShader *GetNative() { return shader; }
 
 private:
-  Device &device;
+  Ptr<Device> device;
   SDL_GPUShader *shader;
 };
 
@@ -196,7 +203,7 @@ private:
 
 class GraphicsPipeline : public px::GraphicsPipeline {
 public:
-  GraphicsPipeline(const CreateInfo &createInfo, Device &device,
+  GraphicsPipeline(const CreateInfo &createInfo, const Ptr<Device> &device,
                    SDL_GPUGraphicsPipeline *pipeline)
       : px::GraphicsPipeline(createInfo), device(device), pipeline(pipeline) {}
   ~GraphicsPipeline() override;
@@ -204,17 +211,18 @@ public:
   inline SDL_GPUGraphicsPipeline *GetNative() { return pipeline; }
 
 private:
-  Device &device;
+  Ptr<Device> device;
   SDL_GPUGraphicsPipeline *pipeline;
 };
 
 class ComputePipeline : public px::ComputePipeline {
 public:
-  ComputePipeline(const CreateInfo &createInfo,
+  ComputePipeline(const CreateInfo &createInfo, const Ptr<Device> &device,
                   SDL_GPUComputePipeline *pipeline)
-      : px::ComputePipeline(createInfo), pipeline(pipeline) {}
+      : px::ComputePipeline(createInfo), device(device), pipeline(pipeline) {}
 
 private:
+  Ptr<Device> device;
   SDL_GPUComputePipeline *pipeline;
 };
 
