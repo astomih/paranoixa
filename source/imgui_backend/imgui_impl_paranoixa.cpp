@@ -545,7 +545,7 @@ IMGUI_IMPL_API void ImGui_ImplParanoixa_CreateFontsTexture() {
     texture_region.depth = 1;
 
     px::Ptr<px::CommandBuffer> cmd =
-        v->Device->CreateCommandBuffer({bd->InitInfo.Allocator});
+        v->Device->AcquireCommandBuffer({bd->InitInfo.Allocator});
     px::Ptr<px::CopyPass> copy_pass = cmd->BeginCopyPass();
     copy_pass->UploadTexture(transfer_info, texture_region, false);
     cmd->EndCopyPass(copy_pass);

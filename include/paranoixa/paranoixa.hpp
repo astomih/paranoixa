@@ -1,14 +1,119 @@
 #ifndef PARANOIXA_HPP
 #define PARANOIXA_HPP
-#include "allocator.hpp"
-#include "define.hpp"
 #include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <print>
+#include <type_traits>
+#include <unordered_map>
 
 namespace paranoixa {
+// Macro to define the build type
+#ifdef _DEBUG
+#define PARANOIXA_BUILD_DEBUG
+#elif NDEBUG
+#define PARANOIXA_BUILD_RELEASE
+#endif
+
+// Macro to define the platform
+#ifdef _WIN32
+#define PARANOIXA_PLATFORM_WINDOWS
+#elif __linux__
+#define PARANOIXA_PLATFORM_LINUX
+#elif __APPLE__
+#define PARANOIXA_PLATFORM_MACOS
+#elif __EMSCRIPTEN__
+#define PARANOIXA_PLATFORM_EMSCRIPTEN
+#endif
+
+// Shared pointer and reference type aliases
+template <class T> using Ptr = std::shared_ptr<T>;
+template <class T> using Ref = std::weak_ptr<T>;
+
+class Allocator {
+public:
+  virtual ~Allocator() {}
+  virtual void *Allocate(const std::size_t &size) = 0;
+  virtual void Free(void *ptr, const std::size_t &size) = 0;
+};
+
+using AllocatorPtr = std::shared_ptr<Allocator>;
+
+template <typename T,
+          typename = std::enable_if_t<std::is_base_of_v<Allocator, T>, void>,
+          class... Args>
+AllocatorPtr MakeAllocatorPtr(Args &&...args) {
+  return std::make_shared<T>(std::forward<Args>(args)...);
+}
+template <typename T> class STLAllocator : public std::allocator<T> {
+public:
+  using value_type = T;
+  STLAllocator() = default;
+  STLAllocator(AllocatorPtr allocator) : allocator(allocator) {}
+  template <typename U>
+  STLAllocator(const STLAllocator<U> &other) : allocator(other.allocator) {}
+
+  T *allocate(std::size_t n) {
+    if (allocator == nullptr) {
+      return std::allocator<T>::allocate(n);
+    }
+    return reinterpret_cast<T *>(allocator->Allocate(n * sizeof(T)));
+  }
+  void deallocate(T *p, std::size_t size) noexcept {
+    if (allocator == nullptr) {
+      std::allocator<T>::deallocate(p, size);
+      return;
+    }
+    allocator->Free(p, size);
+  }
+
+  AllocatorPtr allocator;
+};
+
+// Allocation wrapper functions
+template <class T, class... Args>
+Ptr<T> MakePtr(AllocatorPtr allocator, Args &&...args) {
+  STLAllocator<T> stdAllocator{allocator};
+  return std::allocate_shared<T>(stdAllocator, std::forward<Args>(args)...);
+}
+template <class T, class U> Ptr<T> DownCast(Ptr<U> ptr) {
+#ifdef PARANOIXA_BUILD_DEBUG
+  return std::dynamic_pointer_cast<T>(ptr);
+#else
+  return std::static_pointer_cast<T>(ptr);
+#endif
+}
+
+// Type aliases
+using uint32 = std::uint32_t;
+using uint8 = std::uint8_t;
+using int32 = std::int32_t;
+using int8 = std::int8_t;
+using float32 = std::float_t;
+using float64 = std::double_t;
+
+// Array class
+template <typename T> class Array : public std::vector<T, STLAllocator<T>> {
+public:
+  Array(AllocatorPtr allocator) : std::vector<T, STLAllocator<T>>(allocator) {}
+};
+
+using String =
+    std::basic_string<char, std::char_traits<char>, STLAllocator<char>>;
+
+// Hash map class
+template <typename K, typename V, typename Hash = std::hash<K>,
+          typename Equal = std::equal_to<K>>
+class HashMap : public std::unordered_map<K, V, Hash, Equal,
+                                          STLAllocator<std::pair<const K, V>>> {
+public:
+  HashMap(AllocatorPtr allocator)
+      : std::unordered_map<K, V, Hash, Equal,
+                           STLAllocator<std::pair<const K, V>>>(allocator) {}
+};
 enum class GraphicsAPI {
   Vulkan,
 #ifdef PARANOIXA_PLATFORM_WINDOWS
@@ -21,7 +126,12 @@ enum class GraphicsAPI {
 enum class ShaderFormat { SPIRV };
 enum class ShaderStage { Vertex, Fragment };
 enum class TransferBufferUsage { Upload, Download };
-enum class TextureFormat { Invalid, R8G8B8A8_UNORM, B8G8R8A8_UNORM };
+enum class TextureFormat {
+  Invalid,
+  R8G8B8A8_UNORM,
+  B8G8R8A8_UNORM,
+  D32_FLOAT_S8_UINT
+};
 enum class TextureUsage { Sampler, ColorTarget, DepthStencilTarget };
 enum class TextureType { Texture2D, Texture3D };
 enum class BufferUsage { Vertex, Index, Indirect };
@@ -181,10 +291,11 @@ struct ColorTargetDescription {
 };
 struct TargetInfo {
   TargetInfo(AllocatorPtr allocator)
-      : colorTargetDescriptions(allocator), depthStencilTargetFormat(nullptr),
+      : colorTargetDescriptions(allocator),
+        depthStencilTargetFormat(TextureFormat::Invalid),
         hasDepthStencilTarget(false) {}
   Array<ColorTargetDescription> colorTargetDescriptions;
-  const TextureFormat *depthStencilTargetFormat;
+  TextureFormat depthStencilTargetFormat;
   bool hasDepthStencilTarget;
 };
 class Device;
@@ -234,6 +345,16 @@ struct ColorTargetInfo {
   // clearColor
   LoadOp loadOp;
   StoreOp storeOp;
+};
+struct DepthStencilTargetInfo {
+  Ptr<class Texture> texture;
+  float clearDepth;
+  LoadOp loadOp;
+  StoreOp storeOp;
+  LoadOp stencilLoadOp;
+  StoreOp stencilStoreOp;
+  bool cycle;
+  uint8 clearStencil;
 };
 struct BufferBinding {
   Ptr<class Buffer> buffer;
@@ -339,7 +460,12 @@ public:
   struct CreateInfo {
     CreateInfo(AllocatorPtr allocator)
         : allocator(allocator), vertexInputState(allocator),
-          targetInfo(allocator) {}
+          targetInfo(allocator), vertexShader(nullptr), fragmentShader(nullptr),
+          primitiveType(PrimitiveType::TriangleList),
+          rasterizerState{FillMode::Fill, CullMode::None, FrontFace::Clockwise,
+                          0.0f,           0.0f,           0.0f,
+                          false,          false},
+          multiSampleState(), depthStencilState() {}
     AllocatorPtr allocator;
     Ptr<Shader> vertexShader;
     Ptr<Shader> fragmentShader;
@@ -432,7 +558,8 @@ public:
   virtual void EndCopyPass(Ptr<class CopyPass> copyPass) = 0;
 
   virtual Ptr<class RenderPass>
-  BeginRenderPass(const Array<ColorTargetInfo> &infos) = 0;
+  BeginRenderPass(const Array<ColorTargetInfo> &infos,
+                  const DepthStencilTargetInfo &depthStencilInfo) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
 
   virtual void PushVertexUniformData(uint32 slot, const void *data,
@@ -445,13 +572,12 @@ private:
   CreateInfo createInfo;
 };
 
-class Device {
+class Device : public std::enable_shared_from_this<Device> {
 public:
   struct CreateInfo {
     AllocatorPtr allocator;
     bool debugMode;
   };
-  Device(const CreateInfo &createInfo) : createInfo(createInfo) {}
   virtual ~Device() = default;
   const CreateInfo &GetCreateInfo() const { return createInfo; }
 
@@ -471,13 +597,18 @@ public:
   virtual Ptr<ComputePipeline>
   CreateComputePipeline(const ComputePipeline::CreateInfo &createInfo) = 0;
   virtual Ptr<CommandBuffer>
-  CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) = 0;
+  AcquireCommandBuffer(const CommandBuffer::CreateInfo &createInfo) = 0;
   virtual void SubmitCommandBuffer(Ptr<CommandBuffer> commandBuffer) = 0;
   virtual Ptr<Texture>
   AcquireSwapchainTexture(Ptr<CommandBuffer> commandBuffer) = 0;
+  virtual TextureFormat GetSwapchainFormat() const = 0;
   virtual void WaitForGPUIdle() = 0;
 
   virtual String GetDriver() const = 0;
+
+protected:
+  Device(const CreateInfo &createInfo) : createInfo(createInfo) {}
+  Ptr<Device> GetPtr() { return shared_from_this(); }
 
 private:
   CreateInfo createInfo;

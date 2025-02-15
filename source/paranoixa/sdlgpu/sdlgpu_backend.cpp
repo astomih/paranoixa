@@ -1,9 +1,13 @@
+#include "paranoixa.hpp"
+#include <memory>
 #ifndef EMSCRIPTEN
 #include "sdlgpu_backend.hpp"
 #include "sdlgpu_convert.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
+
+#include <iostream>
 
 namespace paranoixa::sdlgpu {
 Ptr<px::Device> Backend::CreateDevice(const Device::CreateInfo &createInfo) {
@@ -157,7 +161,8 @@ void CommandBuffer::EndCopyPass(Ptr<px::CopyPass> copyPass) {
   SDL_EndGPUCopyPass(DownCast<CopyPass>(copyPass)->GetNative());
 }
 Ptr<px::RenderPass>
-CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos) {
+CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos,
+                               const DepthStencilTargetInfo &depthStencilInfo) {
   Array<SDL_GPUColorTargetInfo> colorTargetInfos(GetCreateInfo().allocator);
   colorTargetInfos.resize(infos.size());
   for (int i = 0; i < infos.size(); ++i) {
@@ -168,8 +173,25 @@ CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos) {
     colorTargetInfos[i].store_op = convert::StoreOpFrom(infos[i].storeOp);
     colorTargetInfos[i].clear_color = {0, 0, 0, 0};
   }
+  SDL_GPUDepthStencilTargetInfo depthStencilTarget{};
+  if (depthStencilInfo.texture != nullptr) {
+    depthStencilTarget.texture =
+        DownCast<Texture>(depthStencilInfo.texture)->GetNative();
+    depthStencilTarget.clear_depth = depthStencilInfo.clearDepth;
+    depthStencilTarget.load_op = convert::LoadOpFrom(depthStencilInfo.loadOp);
+    depthStencilTarget.store_op =
+        convert::StoreOpFrom(depthStencilInfo.storeOp);
+    depthStencilTarget.stencil_load_op =
+        convert::LoadOpFrom(depthStencilInfo.stencilLoadOp);
+    depthStencilTarget.stencil_store_op =
+        convert::StoreOpFrom(depthStencilInfo.stencilStoreOp);
+    depthStencilTarget.cycle = depthStencilInfo.cycle;
+    depthStencilTarget.clear_stencil = depthStencilInfo.clearStencil;
+  }
+
   auto *renderPass = SDL_BeginGPURenderPass(
-      commandBuffer, colorTargetInfos.data(), colorTargetInfos.size(), NULL);
+      commandBuffer, colorTargetInfos.data(), colorTargetInfos.size(),
+      depthStencilInfo.texture ? &depthStencilTarget : nullptr);
   return MakePtr<RenderPass>(GetCreateInfo().allocator,
                              GetCreateInfo().allocator, *this, renderPass);
 }
@@ -181,7 +203,7 @@ void CommandBuffer::PushVertexUniformData(uint32 slot, const void *data,
   SDL_PushGPUVertexUniformData(this->commandBuffer, slot, data, size);
 }
 GraphicsPipeline::~GraphicsPipeline() {
-  SDL_ReleaseGPUGraphicsPipeline(device.GetNative(), pipeline);
+  SDL_ReleaseGPUGraphicsPipeline(device->GetNative(), pipeline);
 }
 Device::~Device() {
   if (window)
@@ -204,7 +226,8 @@ Device::CreateTransferBuffer(const TransferBuffer::CreateInfo &createInfo) {
 
   SDL_GPUTransferBuffer *stagingTextureBuffer =
       SDL_CreateGPUTransferBuffer(device, &stagingTextureBufferCI);
-  return MakePtr<TransferBuffer>(createInfo.allocator, createInfo, *this,
+  return MakePtr<TransferBuffer>(createInfo.allocator, createInfo,
+                                 DownCast<Device>(GetPtr()),
                                  stagingTextureBuffer);
 }
 
@@ -213,7 +236,8 @@ Ptr<px::Buffer> Device::CreateBuffer(const Buffer::CreateInfo &createInfo) {
   bufferCI.usage = convert::BufferUsageFrom(createInfo.usage);
   bufferCI.size = createInfo.size;
   SDL_GPUBuffer *buffer = SDL_CreateGPUBuffer(device, &bufferCI);
-  return MakePtr<Buffer>(createInfo.allocator, createInfo, *this, buffer);
+  return MakePtr<Buffer>(createInfo.allocator, createInfo,
+                         DownCast<Device>(GetPtr()), buffer);
 }
 
 Ptr<px::Texture> Device::CreateTexture(const Texture::CreateInfo &createInfo) {
@@ -229,8 +253,8 @@ Ptr<px::Texture> Device::CreateTexture(const Texture::CreateInfo &createInfo) {
   };
 
   SDL_GPUTexture *texture = SDL_CreateGPUTexture(device, &textureCreateInfo);
-  return MakePtr<Texture>(createInfo.allocator, createInfo, *this, texture,
-                          false);
+  return MakePtr<Texture>(createInfo.allocator, createInfo,
+                          DownCast<Device>(GetPtr()), texture, false);
 }
 Ptr<px::Sampler> Device::CreateSampler(const Sampler::CreateInfo &createInfo) {
   SDL_GPUSamplerCreateInfo samplerCreateInfo = {
@@ -242,22 +266,23 @@ Ptr<px::Sampler> Device::CreateSampler(const Sampler::CreateInfo &createInfo) {
       .address_mode_w = convert::AddressModeFrom(createInfo.addressModeW),
   };
   SDL_GPUSampler *sampler = SDL_CreateGPUSampler(device, &samplerCreateInfo);
-  return MakePtr<Sampler>(createInfo.allocator, createInfo, *this, sampler);
+  return MakePtr<Sampler>(createInfo.allocator, createInfo,
+                          DownCast<Device>(GetPtr()), sampler);
 }
 
 TransferBuffer::~TransferBuffer() {
-  SDL_ReleaseGPUTransferBuffer(device.GetNative(), transferBuffer);
+  SDL_ReleaseGPUTransferBuffer(device->GetNative(), transferBuffer);
 }
 
 void *TransferBuffer::Map(bool cycle) {
-  return SDL_MapGPUTransferBuffer(device.GetNative(), this->transferBuffer,
+  return SDL_MapGPUTransferBuffer(device->GetNative(), this->transferBuffer,
                                   cycle);
 }
 void TransferBuffer::Unmap() {
-  SDL_UnmapGPUTransferBuffer(device.GetNative(), this->transferBuffer);
+  SDL_UnmapGPUTransferBuffer(device->GetNative(), this->transferBuffer);
 }
 
-Buffer::~Buffer() { SDL_ReleaseGPUBuffer(device.GetNative(), buffer); }
+Buffer::~Buffer() { SDL_ReleaseGPUBuffer(device->GetNative(), buffer); }
 
 Ptr<px::Shader> Device::CreateShader(const Shader::CreateInfo &createInfo) {
   SDL_GPUShaderCreateInfo shaderCI = {};
@@ -274,10 +299,14 @@ Ptr<px::Shader> Device::CreateShader(const Shader::CreateInfo &createInfo) {
   shaderCI.num_uniform_buffers = createInfo.numUniformBuffers;
 
   auto *shader = SDL_CreateGPUShader(device, &shaderCI);
-  return MakePtr<Shader>(createInfo.allocator, createInfo, *this, shader);
+
+  auto pD = (GetPtr());
+  auto p = DownCast<Device>(pD);
+
+  return MakePtr<Shader>(createInfo.allocator, createInfo, p, shader);
 }
 Ptr<px::CommandBuffer>
-Device::CreateCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
+Device::AcquireCommandBuffer(const CommandBuffer::CreateInfo &createInfo) {
   SDL_GPUCommandBuffer *commandBuffer = SDL_AcquireGPUCommandBuffer(device);
   return MakePtr<CommandBuffer>(createInfo.allocator, createInfo,
                                 commandBuffer);
@@ -364,9 +393,9 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
     auto &blend = colorTargetDesc.blend_state;
 
     blend.src_alpha_blendfactor =
-        convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
+        convert::BlendFactorFrom(pxBlend.srcAlphaBlendFactor);
     blend.dst_alpha_blendfactor =
-        convert::BlendFactorFrom(pxBlend.dstColorBlendFactor);
+        convert::BlendFactorFrom(pxBlend.dstAlphaBlendFactor);
     blend.color_blend_op = convert::BlendOpFrom(pxBlend.colorBlendOp);
     blend.src_color_blendfactor =
         convert::BlendFactorFrom(pxBlend.srcColorBlendFactor);
@@ -380,6 +409,10 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
   }
   pipelineCI.target_info.color_target_descriptions = colorTargetDescs.data();
   pipelineCI.target_info.num_color_targets = colorTargetDescs.size();
+  pipelineCI.target_info.has_depth_stencil_target =
+      createInfo.targetInfo.hasDepthStencilTarget;
+  pipelineCI.target_info.depth_stencil_format = convert::TextureFormatFrom(
+      createInfo.targetInfo.depthStencilTargetFormat);
   pipelineCI.vertex_input_state.num_vertex_attributes =
       createInfo.vertexInputState.vertexAttributes.size();
   pipelineCI.vertex_input_state.num_vertex_buffers =
@@ -413,12 +446,13 @@ Device::CreateGraphicsPipeline(const GraphicsPipeline::CreateInfo &createInfo) {
   pipelineCI.vertex_input_state.vertex_buffer_descriptions = vbDescs.data();
 
   auto *pipeline = SDL_CreateGPUGraphicsPipeline(device, &pipelineCI);
-  return MakePtr<GraphicsPipeline>(createInfo.allocator, createInfo, *this,
-                                   pipeline);
+  return MakePtr<GraphicsPipeline>(createInfo.allocator, createInfo,
+                                   DownCast<Device>(GetPtr()), pipeline);
 }
 Ptr<px::ComputePipeline>
 Device::CreateComputePipeline(const ComputePipeline::CreateInfo &createInfo) {
-  return MakePtr<ComputePipeline>(createInfo.allocator, createInfo, nullptr);
+  return MakePtr<ComputePipeline>(createInfo.allocator, createInfo,
+                                  DownCast<Device>(GetPtr()), nullptr);
 }
 void Device::SubmitCommandBuffer(Ptr<px::CommandBuffer> commandBuffer) {
   SDL_SubmitGPUCommandBuffer(
@@ -428,16 +462,25 @@ Ptr<px::Texture>
 Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
 
   auto raw = DownCast<CommandBuffer>(commandBuffer);
-  SDL_GPUTexture *nativeTex;
-  SDL_WaitAndAcquireGPUSwapchainTexture(raw->GetNative(), window, &nativeTex,
-                                        nullptr, nullptr);
+  SDL_GPUTexture *nativeTex = nullptr;
+  assert(SDL_WaitAndAcquireGPUSwapchainTexture(raw->GetNative(), window,
+                                               &nativeTex,
+
+                                               nullptr, nullptr));
   assert(nativeTex);
 
   Texture::CreateInfo ci{};
   ci.allocator = commandBuffer->GetCreateInfo().allocator;
   auto texture = MakePtr<Texture>(commandBuffer->GetCreateInfo().allocator, ci,
-                                  *this, nativeTex, true);
+                                  DownCast<Device>(GetPtr()), nativeTex, true);
   return texture;
+}
+px::TextureFormat Device::GetSwapchainFormat() const {
+  auto format = SDL_GetGPUSwapchainTextureFormat(device, window);
+  if (format == SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM) {
+    return px::TextureFormat::B8G8R8A8_UNORM;
+  }
+  return px::TextureFormat::Invalid;
 }
 void Device::WaitForGPUIdle() { SDL_WaitForGPUIdle(device); }
 String Device::GetDriver() const {
@@ -445,10 +488,10 @@ String Device::GetDriver() const {
 }
 Texture::~Texture() {
   if (!isSwapchainTexture)
-    SDL_ReleaseGPUTexture(device.GetNative(), texture);
+    SDL_ReleaseGPUTexture(device->GetNative(), texture);
 }
 
-Shader::~Shader() { SDL_ReleaseGPUShader(device.GetNative(), shader); }
-Sampler::~Sampler() { SDL_ReleaseGPUSampler(device.GetNative(), sampler); }
+Shader::~Shader() { SDL_ReleaseGPUShader(device->GetNative(), shader); }
+Sampler::~Sampler() { SDL_ReleaseGPUSampler(device->GetNative(), sampler); }
 } // namespace paranoixa::sdlgpu
 #endif // EMSCRIPTEN

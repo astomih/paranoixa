@@ -1,6 +1,6 @@
 #ifndef PARANOIXA_STD_ALLOCATOR_HPP
 #define PARANOIXA_STD_ALLOCATOR_HPP
-#include "allocator.hpp"
+#include "paranoixa.hpp"
 
 namespace paranoixa {
 class StdAllocator : public Allocator {

@@ -1,4 +1,5 @@
 #include "sdlgpu_convert.hpp"
+#include "SDL3/SDL_gpu.h"
 namespace paranoixa::sdlgpu {
 namespace convert {
 SDL_GPULoadOp LoadOpFrom(LoadOp loadOp) {
@@ -75,6 +76,8 @@ SDL_GPUTextureFormat TextureFormatFrom(TextureFormat textureFormat) {
     return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
   case TextureFormat::B8G8R8A8_UNORM:
     return SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
+  case TextureFormat::D32_FLOAT_S8_UINT:
+    return SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT;
   default:
     return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
     break;

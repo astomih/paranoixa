@@ -10,6 +10,8 @@
 #include <backends/imgui_impl_sdl3.h>
 #include <imgui_impl_paranoixa.hpp>
 
+#include <iostream>
+
 void MemoryAllocatorTest();
 void PtrTest();
 
@@ -206,7 +208,7 @@ int main() {
       stagingVertexBuffer->Unmap();
 
       // transfer texture/vertex buffer to gpu
-      auto command = device->CreateCommandBuffer({allocator});
+      auto command = device->AcquireCommandBuffer({allocator});
       auto copyPass = command->BeginCopyPass();
 
       {
@@ -300,7 +302,7 @@ int main() {
         }
         CommandBuffer::CreateInfo commandBufferCI{};
         commandBufferCI.allocator = allocator;
-        auto cmdbuf = device->CreateCommandBuffer(commandBufferCI);
+        auto cmdbuf = device->AcquireCommandBuffer(commandBufferCI);
 
         swapchainTexture = device->AcquireSwapchainTexture(cmdbuf);
 
@@ -322,7 +324,7 @@ int main() {
         ImDrawData *draw_data = ImGui::GetDrawData();
 
         Imgui_ImplParanoixa_PrepareDrawData(draw_data, cmdbuf);
-        auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos);
+        auto renderPass = cmdbuf->BeginRenderPass(colorTargetInfos, {});
         renderPass->BindGraphicsPipeline(pipeline);
         Array<BufferBinding> bindings(allocator);
         bindings.push_back({vertexBuffer, 0});
