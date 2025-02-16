@@ -45,8 +45,7 @@ Ptr<Backend> Paranoixa::CreateBackend(Allocator *allocator,
 }
 Allocator *Paranoixa::CreateAllocator(size_t size) {
 #ifdef _MSC_VER
-  // return new StdAllocator(size);
-  return std::pmr::get_default_resource();
+  return new TLSFAllocator(size);
 #else
   return new StdAllocator(size);
 #endif

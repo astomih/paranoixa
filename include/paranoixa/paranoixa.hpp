@@ -40,10 +40,8 @@ using Allocator = std::pmr::memory_resource;
 // Allocation wrapper functions
 template <class T, class... Args>
 Ptr<T> MakePtr(Allocator *allocator, Args &&...args) {
-  return std::make_shared<T>(std::forward<Args>(args)...);
-  // return
-  // std::allocate_shared<T>(std::pmr::polymorphic_allocator<T>(allocator),
-  //                                std::forward<Args>(args)...);
+  return std::allocate_shared<T>(std::pmr::polymorphic_allocator<T>(allocator),
+                                 std::forward<Args>(args)...);
 }
 template <class T, class U> Ptr<T> DownCast(Ptr<U> ptr) {
 #ifdef PARANOIXA_BUILD_DEBUG
