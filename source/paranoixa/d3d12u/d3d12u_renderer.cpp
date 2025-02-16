@@ -23,7 +23,7 @@ namespace paranoixa {
 #define QUERY_INTERFACE(from, to)                                              \
   from->QueryInterface(__uuidof(decltype(to)), (void **)&to)
 
-D3d12uRenderer::D3d12uRenderer(AllocatorPtr allocator)
+D3d12uRenderer::D3d12uRenderer(Allocator *allocator)
     : allocator(allocator), device(nullptr) {}
 
 D3d12uRenderer::~D3d12uRenderer() {

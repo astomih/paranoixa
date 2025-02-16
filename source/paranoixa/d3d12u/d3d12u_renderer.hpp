@@ -12,7 +12,7 @@
 namespace paranoixa {
 class D3d12uRenderer {
 public:
-  D3d12uRenderer(AllocatorPtr allcator);
+  D3d12uRenderer(Allocator *allcator);
   ~D3d12uRenderer();
   void Initialize(void *window);
   void ProcessEvent(void *event);
@@ -77,7 +77,7 @@ private:
   void PrepareTexture();
 
   UINT frameCount = 2;
-  AllocatorPtr allocator;
+  Allocator *allocator;
   HWND hWindow;
   void *pWindow;
   ID3D12Device *device;

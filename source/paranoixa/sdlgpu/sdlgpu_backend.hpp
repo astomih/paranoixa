@@ -129,7 +129,7 @@ private:
 
 class CopyPass : public px::CopyPass {
 public:
-  CopyPass(AllocatorPtr allocator, class CommandBuffer &commandBuffer,
+  CopyPass(Allocator *allocator, class CommandBuffer &commandBuffer,
            SDL_GPUCopyPass *copyPass)
       : px::CopyPass(), commandBuffer(commandBuffer), copyPass(copyPass) {}
   inline SDL_GPUCopyPass *GetNative() { return copyPass; }
@@ -150,7 +150,7 @@ private:
 
 class RenderPass : public px::RenderPass {
 public:
-  RenderPass(AllocatorPtr allocator, CommandBuffer &commandBuffer,
+  RenderPass(Allocator *allocator, CommandBuffer &commandBuffer,
              SDL_GPURenderPass *renderPass)
       : px::RenderPass(), allocator(allocator), commandBuffer(commandBuffer),
         renderPass(renderPass) {}
@@ -174,7 +174,7 @@ public:
                              uint32 firstInstance) override;
 
 private:
-  AllocatorPtr allocator;
+  Allocator *allocator;
   SDL_GPURenderPass *renderPass;
   class CommandBuffer &commandBuffer;
 };
@@ -217,9 +217,11 @@ private:
 
 class ComputePipeline : public px::ComputePipeline {
 public:
+  ComputePipeline() : px::ComputePipeline({}) {};
   ComputePipeline(const CreateInfo &createInfo, const Ptr<Device> &device,
                   SDL_GPUComputePipeline *pipeline)
       : px::ComputePipeline(createInfo), device(device), pipeline(pipeline) {}
+  ~ComputePipeline() override {}
 
 private:
   Ptr<Device> device;

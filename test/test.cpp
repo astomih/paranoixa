@@ -66,9 +66,6 @@ int main() {
   MemoryAllocatorTest();
   PtrTest();
   auto allocator = Paranoixa::CreateAllocator(0x8000);
-  STLAllocator<int> stdAllocator{allocator};
-  std::vector<int, STLAllocator<int>> vec({allocator});
-  vec.push_back(1);
   {
     if (!SDL_Init(SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
       SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Could not initialize SDL: %s",
@@ -349,9 +346,9 @@ int main() {
 void MemoryAllocatorTest() {
   using namespace paranoixa;
   std::print("Memory Allocator Test");
-  AllocatorPtr allocator = Paranoixa::CreateAllocator(0x2000);
-  void *ptr = allocator->Allocate(128);
-  allocator->Free(ptr, 128);
+  Allocator *allocator = Paranoixa::CreateAllocator(0x2000);
+  void *ptr = allocator->allocate(128);
+  allocator->deallocate(ptr, 128);
   std::cout << "----------------------------------------------" << std::endl;
 }
 
@@ -373,7 +370,6 @@ void PtrTest() {
       std::cout << ptr->a << std::endl;
       ptr.reset();
     }
-    std::cout << "allocator.count : " << allocator.use_count() << std::endl;
   }
   std::cout << "---------------------------------" << std::endl;
 }

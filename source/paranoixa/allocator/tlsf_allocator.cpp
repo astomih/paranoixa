@@ -11,11 +11,14 @@ TLSFAllocator::TLSFAllocator(const std::size_t &size)
 
 TLSFAllocator::~TLSFAllocator() { free(mem); }
 
-void *TLSFAllocator::Allocate(const std::size_t &size) {
-  return tlsf_malloc(tlsf, size);
+void *TLSFAllocator::do_allocate(std::size_t bytes, std::size_t alignment) {
+  return tlsf_malloc(tlsf, bytes);
 }
 
-void TLSFAllocator::Free(void *ptr, const std::size_t &size) {
+void TLSFAllocator::do_deallocate(void *ptr, std::size_t size,
+                                  std::size_t alignment) {
+  assert(ptr != nullptr);
+  assert(size > 0);
   tlsf_free(tlsf, ptr);
 }
 

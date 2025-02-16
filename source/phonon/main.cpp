@@ -137,9 +137,6 @@ int main() {
   MemoryAllocatorTest();
   PtrTest();
   auto allocator = Paranoixa::CreateAllocator(0x2000);
-  STLAllocator<int> stdAllocator{allocator};
-  std::vector<int, STLAllocator<int>> vec({allocator});
-  vec.push_back(1);
   {
 
     SDL_AudioSpec desiredSpec;
