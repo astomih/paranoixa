@@ -8,7 +8,7 @@
 namespace paranoixa {
 class WebGPURenderer {
 public:
-  WebGPURenderer(AllocatorPtr pAllocator);
+  WebGPURenderer(Allocator *pAllocator);
   ~WebGPURenderer();
   void Initialize(void *window);
   void ProcessEvent(void *event);

@@ -23,7 +23,7 @@
 namespace paranoixa {
 #define COUNT_OF(x)                                                            \
   ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
-WebGPURenderer::WebGPURenderer(AllocatorPtr allocator)
+WebGPURenderer::WebGPURenderer(Allocator *allocator)
     : instance(nullptr), adapter(nullptr), device(nullptr), queue(nullptr),
       surface(nullptr), targetView(nullptr), bindGroup(nullptr),
       surfaceFormat(WGPUTextureFormat_Undefined), texture{}, sampler(nullptr),

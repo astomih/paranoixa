@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+#include <memory_resource>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif // __EMSCRIPTEN__
@@ -17,7 +18,7 @@
 #include <fstream>
 #include <iostream>
 namespace paranoixa {
-Ptr<Backend> Paranoixa::CreateBackend(AllocatorPtr allocator,
+Ptr<Backend> Paranoixa::CreateBackend(Allocator *allocator,
                                       const GraphicsAPI &api) {
 #ifndef __EMSCRIPTEN__
   switch (api) {
@@ -42,12 +43,11 @@ Ptr<Backend> Paranoixa::CreateBackend(AllocatorPtr allocator,
 #endif
   return nullptr;
 }
-AllocatorPtr Paranoixa::CreateAllocator(size_t size) {
+Allocator *Paranoixa::CreateAllocator(size_t size) {
 #ifdef _MSC_VER
-  return MakeAllocatorPtr<StdAllocator>(size);
-  // return MakeAllocatorPtr<TLSFAllocator>(size);
+  return new TLSFAllocator(size);
 #else
-  return MakeAllocatorPtr<StdAllocator>(size);
+  return new StdAllocator(size);
 #endif
 }
 } // namespace paranoixa

@@ -5,7 +5,7 @@
 #include <paranoixa/paranoixa.hpp>
 
 struct ImGui_ImplParanoixa_InitInfo {
-  px::AllocatorPtr Allocator = nullptr;
+  px::Allocator *Allocator = nullptr;
   px::Ptr<px::Device> Device = nullptr;
   px::TextureFormat ColorTargetFormat = px::TextureFormat::Invalid;
   px::SampleCount MSAASamples = px::SampleCount::x1;

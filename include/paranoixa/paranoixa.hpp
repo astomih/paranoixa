@@ -6,7 +6,9 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <memory_resource>
 #include <print>
+#include <string>
 #include <type_traits>
 #include <unordered_map>
 
@@ -33,51 +35,13 @@ namespace paranoixa {
 template <class T> using Ptr = std::shared_ptr<T>;
 template <class T> using Ref = std::weak_ptr<T>;
 
-class Allocator {
-public:
-  virtual ~Allocator() {}
-  virtual void *Allocate(const std::size_t &size) = 0;
-  virtual void Free(void *ptr, const std::size_t &size) = 0;
-};
-
-using AllocatorPtr = std::shared_ptr<Allocator>;
-
-template <typename T,
-          typename = std::enable_if_t<std::is_base_of_v<Allocator, T>, void>,
-          class... Args>
-AllocatorPtr MakeAllocatorPtr(Args &&...args) {
-  return std::make_shared<T>(std::forward<Args>(args)...);
-}
-template <typename T> class STLAllocator : public std::allocator<T> {
-public:
-  using value_type = T;
-  STLAllocator() = default;
-  STLAllocator(AllocatorPtr allocator) : allocator(allocator) {}
-  template <typename U>
-  STLAllocator(const STLAllocator<U> &other) : allocator(other.allocator) {}
-
-  T *allocate(std::size_t n) {
-    if (allocator == nullptr) {
-      return std::allocator<T>::allocate(n);
-    }
-    return reinterpret_cast<T *>(allocator->Allocate(n * sizeof(T)));
-  }
-  void deallocate(T *p, std::size_t size) noexcept {
-    if (allocator == nullptr) {
-      std::allocator<T>::deallocate(p, size);
-      return;
-    }
-    allocator->Free(p, size);
-  }
-
-  AllocatorPtr allocator;
-};
+using Allocator = std::pmr::memory_resource;
 
 // Allocation wrapper functions
 template <class T, class... Args>
-Ptr<T> MakePtr(AllocatorPtr allocator, Args &&...args) {
-  STLAllocator<T> stdAllocator{allocator};
-  return std::allocate_shared<T>(stdAllocator, std::forward<Args>(args)...);
+Ptr<T> MakePtr(Allocator *allocator, Args &&...args) {
+  return std::allocate_shared<T>(std::pmr::polymorphic_allocator<T>(allocator),
+                                 std::forward<Args>(args)...);
 }
 template <class T, class U> Ptr<T> DownCast(Ptr<U> ptr) {
 #ifdef PARANOIXA_BUILD_DEBUG
@@ -96,24 +60,15 @@ using float32 = std::float_t;
 using float64 = std::double_t;
 
 // Array class
-template <typename T> class Array : public std::vector<T, STLAllocator<T>> {
-public:
-  Array(AllocatorPtr allocator) : std::vector<T, STLAllocator<T>>(allocator) {}
-};
+template <typename T> using Array = std::pmr::vector<T>;
 
-using String =
-    std::basic_string<char, std::char_traits<char>, STLAllocator<char>>;
+using String = std::pmr::string;
 
 // Hash map class
 template <typename K, typename V, typename Hash = std::hash<K>,
           typename Equal = std::equal_to<K>>
-class HashMap : public std::unordered_map<K, V, Hash, Equal,
-                                          STLAllocator<std::pair<const K, V>>> {
-public:
-  HashMap(AllocatorPtr allocator)
-      : std::unordered_map<K, V, Hash, Equal,
-                           STLAllocator<std::pair<const K, V>>>(allocator) {}
-};
+using HashMap = std::pmr::unordered_map<K, V, Hash, Equal>;
+
 enum class GraphicsAPI {
   Vulkan,
 #ifdef PARANOIXA_PLATFORM_WINDOWS
@@ -186,7 +141,7 @@ struct VertexAttribute {
   uint32 offset;
 };
 struct VertexInputState {
-  VertexInputState(AllocatorPtr allocator)
+  VertexInputState(Allocator *allocator)
       : vertexBufferDescriptions(allocator), vertexAttributes(allocator) {}
   Array<VertexBufferDescription> vertexBufferDescriptions;
   Array<VertexAttribute> vertexAttributes;
@@ -290,7 +245,7 @@ struct ColorTargetDescription {
   ColorTargetBlendState blendState;
 };
 struct TargetInfo {
-  TargetInfo(AllocatorPtr allocator)
+  TargetInfo(Allocator *allocator)
       : colorTargetDescriptions(allocator),
         depthStencilTargetFormat(TextureFormat::Invalid),
         hasDepthStencilTarget(false) {}
@@ -302,7 +257,7 @@ class Device;
 class Texture {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
     TextureType type;
     TextureFormat format;
     TextureUsage usage;
@@ -373,7 +328,7 @@ struct MultiSampleState {
 class Sampler {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
     Filter minFilter;
     Filter magFilter;
     MipmapMode mipmapMode;
@@ -398,7 +353,7 @@ private:
 class Buffer {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
     BufferUsage usage;
     uint32 size;
   };
@@ -414,7 +369,7 @@ private:
 class TransferBuffer {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
     TransferBufferUsage usage;
     uint32 size;
   };
@@ -435,7 +390,7 @@ private:
 class Shader {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
     size_t size;
     const void *data;
     const char *entrypoint;
@@ -458,7 +413,7 @@ private:
 class GraphicsPipeline {
 public:
   struct CreateInfo {
-    CreateInfo(AllocatorPtr allocator)
+    CreateInfo(Allocator *allocator)
         : allocator(allocator), vertexInputState(allocator),
           targetInfo(allocator), vertexShader(nullptr), fragmentShader(nullptr),
           primitiveType(PrimitiveType::TriangleList),
@@ -466,7 +421,7 @@ public:
                           0.0f,           0.0f,           0.0f,
                           false,          false},
           multiSampleState(), depthStencilState() {}
-    AllocatorPtr allocator;
+    Allocator *allocator;
     Ptr<Shader> vertexShader;
     Ptr<Shader> fragmentShader;
     VertexInputState vertexInputState;
@@ -488,7 +443,7 @@ private:
 class ComputePipeline {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
     Ptr<Shader> computeShader;
   };
   virtual ~ComputePipeline() = default;
@@ -548,7 +503,7 @@ protected:
 class CommandBuffer {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
   };
   virtual ~CommandBuffer() = default;
 
@@ -575,7 +530,7 @@ private:
 class Device : public std::enable_shared_from_this<Device> {
 public:
   struct CreateInfo {
-    AllocatorPtr allocator;
+    Allocator *allocator;
     bool debugMode;
   };
   virtual ~Device() = default;
@@ -623,9 +578,9 @@ public:
 
 class Paranoixa {
 public:
-  static Ptr<Backend> CreateBackend(AllocatorPtr allocator,
+  static Ptr<Backend> CreateBackend(Allocator *allocator,
                                     const GraphicsAPI &api);
-  static AllocatorPtr CreateAllocator(size_t size);
+  static Allocator *CreateAllocator(size_t size);
 };
 } // namespace paranoixa
 namespace px = paranoixa;
