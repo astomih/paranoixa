@@ -467,7 +467,9 @@ Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
                                                &nativeTex,
 
                                                nullptr, nullptr));
-  assert(nativeTex);
+  if (!nativeTex) {
+    return nullptr;
+  }
 
   Texture::CreateInfo ci{};
   ci.allocator = commandBuffer->GetCreateInfo().allocator;
