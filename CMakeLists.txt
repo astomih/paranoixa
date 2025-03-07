@@ -121,3 +121,5 @@ if(WIN32)
     )
   endif()
 endif()
+
+set_property(TARGET paranoixa PROPERTY CXX_STANDARD 23)
