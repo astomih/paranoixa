@@ -81,6 +81,29 @@ void CopyPass::DownloadBuffer(const BufferRegion &src,
   };
   SDL_DownloadFromGPUBuffer(this->copyPass, &region, &transferInfo);
 }
+void CopyPass::CopyTexture(const TextureLocation &src,
+                           const TextureLocation &dst, uint32 width,
+                           uint32 height, uint32 depth, bool cycle) {
+  SDL_GPUTextureLocation srcLocation = {
+      .texture = DownCast<Texture>(src.texture)->GetNative(),
+      .mip_level = src.mipLevel,
+      .layer = src.layer,
+      .x = src.x,
+      .y = src.y,
+      .z = src.z,
+  };
+  SDL_GPUTextureLocation dstLocation = {
+
+      .texture = DownCast<Texture>(dst.texture)->GetNative(),
+      .mip_level = dst.mipLevel,
+      .layer = dst.layer,
+      .x = dst.x,
+      .y = dst.y,
+      .z = dst.z,
+  };
+  SDL_CopyGPUTextureToTexture(this->copyPass, &srcLocation, &dstLocation, width,
+                              height, depth, cycle);
+}
 void RenderPass::BindGraphicsPipeline(Ptr<px::GraphicsPipeline> pipeline) {
   SDL_BindGPUGraphicsPipeline(
       this->renderPass, DownCast<GraphicsPipeline>(pipeline)->GetNative());

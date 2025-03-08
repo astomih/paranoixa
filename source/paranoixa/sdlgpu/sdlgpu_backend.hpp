@@ -143,6 +143,10 @@ public:
   virtual void DownloadBuffer(const BufferRegion &src,
                               const BufferTransferInfo &dst) override;
 
+  virtual void CopyTexture(const TextureLocation &src,
+                           const TextureLocation &dst, uint32 width,
+                           uint32 height, uint32 depth, bool cycle) override;
+
 private:
   SDL_GPUCopyPass *copyPass;
   class CommandBuffer &commandBuffer;
