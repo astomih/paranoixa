@@ -485,12 +485,17 @@ Ptr<px::Texture>
 Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
 
   auto raw = DownCast<CommandBuffer>(commandBuffer);
+  auto buffer = raw->GetNative();
+  if (buffer == nullptr) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Command buffer is not valid for swapchain texture");
+    return nullptr;
+  }
   SDL_GPUTexture *nativeTex = nullptr;
-  assert(SDL_WaitAndAcquireGPUSwapchainTexture(raw->GetNative(), window,
-                                               &nativeTex,
-
-                                               nullptr, nullptr));
-  if (!nativeTex) {
+  SDL_WaitAndAcquireGPUSwapchainTexture(buffer, window, &nativeTex, nullptr,
+                                        nullptr);
+  if (nativeTex == nullptr) {
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", SDL_GetError());
     return nullptr;
   }
 
