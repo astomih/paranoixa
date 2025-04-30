@@ -526,7 +526,8 @@ public:
 
   virtual Ptr<class RenderPass>
   BeginRenderPass(const Array<ColorTargetInfo> &infos,
-                  const DepthStencilTargetInfo &depthStencilInfo) = 0;
+                  const DepthStencilTargetInfo &depthStencilInfo, float r = 0.f,
+                  float g = 0.f, float b = 0.f, float a = 1.f) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
 
   virtual void PushVertexUniformData(uint32 slot, const void *data,

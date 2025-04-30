@@ -185,7 +185,8 @@ void CommandBuffer::EndCopyPass(Ptr<px::CopyPass> copyPass) {
 }
 Ptr<px::RenderPass>
 CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos,
-                               const DepthStencilTargetInfo &depthStencilInfo) {
+                               const DepthStencilTargetInfo &depthStencilInfo,
+                               float r, float g, float b, float a) {
   Array<SDL_GPUColorTargetInfo> colorTargetInfos(GetCreateInfo().allocator);
   colorTargetInfos.resize(infos.size());
   for (int i = 0; i < infos.size(); ++i) {
@@ -194,7 +195,7 @@ CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos,
         DownCast<Texture>(infos[i].texture)->GetNative();
     colorTargetInfos[i].load_op = convert::LoadOpFrom(infos[i].loadOp);
     colorTargetInfos[i].store_op = convert::StoreOpFrom(infos[i].storeOp);
-    colorTargetInfos[i].clear_color = {0, 0, 0, 0};
+    colorTargetInfos[i].clear_color = {r, g, b, a};
   }
   SDL_GPUDepthStencilTargetInfo depthStencilTarget{};
   if (depthStencilInfo.texture != nullptr) {
