@@ -13,9 +13,6 @@
 [submodule "library/volk"]
 	path = library/volk
 	url = https://github.com/zeux/volk
-[submodule "library/imnodes"]
-	path = library/imnodes
-	url = https://github.com/Nelarius/imnodes
 [submodule "library/WebGPU-distribution"]
 	path = library/WebGPU-distribution
 	url = https://github.com/eliemichel/WebGPU-distribution

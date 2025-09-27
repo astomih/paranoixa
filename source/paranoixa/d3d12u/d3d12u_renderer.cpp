@@ -1,7 +1,6 @@
-﻿#ifndef EMSCRIPTEN
+﻿#ifdef _WIN32
 #include "d3d12u_renderer.hpp"
 
-#ifdef _WIN32
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #define SDL_MAIN_HANDLED
@@ -806,4 +805,3 @@ void D3d12uRenderer::PrepareTexture() {
 // namespace paranoixa
 } // namespace paranoixa
 #endif // _WIN32
-#endif // EMSCRIPTEN

@@ -1,6 +1,8 @@
 #ifndef PARANOIXA_WEBGPU_RENDERER_HPP
 #define PARANOIXA_WEBGPU_RENDERER_HPP
 
+#ifndef __ANDROID__
+
 #include <SDL3/SDL.h>
 #include <paranoixa.hpp>
 #include <webgpu/webgpu.h>
@@ -66,4 +68,5 @@ private:
   WGPUCommandEncoder encoder;
 };
 } // namespace paranoixa
+#endif // __ANDROID__
 #endif // PARANOIXA_WEBGPU_RENDERER_HPP

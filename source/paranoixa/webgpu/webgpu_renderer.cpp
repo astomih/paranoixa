@@ -1,3 +1,4 @@
+#ifndef __ANDROID__
 #include <webgpu/webgpu.h>
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
@@ -672,3 +673,4 @@ void WebGPURenderer::InitializePipeline() {
   wgpuShaderModuleRelease(vertShaderModule);
 } // namespace paranoixa
 } // namespace paranoixa
+#endif // __ANDROID__

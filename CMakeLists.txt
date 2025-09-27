@@ -23,6 +23,13 @@ endif()
 
 if(WIN32)
   set(PARANOIXA_USE_WEBGPU ON)
+endif()
+
+if(ANDROID)
+  set(PARANOIXA_USE_WEBGPU OFF)
+endif()
+
+if(WIN32 OR ANDROID)
 
   if(PARANOIXA_USE_WEBGPU)
     set(CMAKE_FOLDER "dawn")
@@ -36,7 +43,6 @@ if(WIN32)
   set(PARANOIXA_INCLUDE_DIRS
     ${Vulkan_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/library/imgui
-    ${CMAKE_CURRENT_SOURCE_DIR}/library/imnodes
     ${CMAKE_CURRENT_SOURCE_DIR}/library/SDL/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/paranoixa
     ${CMAKE_CURRENT_SOURCE_DIR}/library/volk
@@ -54,7 +60,6 @@ if(EMSCRIPTEN)
   include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include/paranoixa
     ${CMAKE_CURRENT_SOURCE_DIR}/library/imgui
-    ${CMAKE_CURRENT_SOURCE_DIR}/library/imnodes
     ${CMAKE_CURRENT_SOURCE_DIR}/library/tlsf
   )
 endif()
@@ -71,7 +76,6 @@ if(EMSCRIPTEN)
     SOURCE_FILES
     ${SOURCE_FILES}
     library/imgui/*.cpp
-    library/imnodes/*.cpp
     library/imgui/backends/imgui_impl_sdl3.cpp
     library/imgui/backends/imgui_impl_wgpu.cpp
   )
@@ -84,7 +88,6 @@ if(WIN32)
     library/*.c
     library/*.cpp
     library/imgui/*.cpp
-    library/imnodes/*.cpp
     library/imgui/backends/imgui_impl_sdl3.cpp
     library/imgui/backends/imgui_impl_vulkan.cpp
     library/imgui/backends/imgui_impl_dx12.cpp
@@ -93,7 +96,15 @@ if(WIN32)
   )
 endif()
 
-add_subdirectory(source/phonon)
+if(ANDROID)
+  file(GLOB
+    SOURCE_FILES
+    ${SOURCE_FILES}
+    library/imgui/*.cpp
+    library/imgui/backends/imgui_impl_sdl3.cpp
+  )
+endif()
+
 add_subdirectory(source/imgui_backend)
 add_subdirectory(test)
 
@@ -104,7 +115,7 @@ if(EMSCRIPTEN)
   target_link_libraries(paranoixa PRIVATE SDL3::SDL3)
 endif()
 
-if(WIN32)
+if(WIN32 OR ANDROID)
   if(PARANOIXA_USE_WEBGPU)
     target_link_libraries(paranoixa PRIVATE
       webgpu

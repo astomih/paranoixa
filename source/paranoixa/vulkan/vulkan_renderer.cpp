@@ -9,7 +9,6 @@
 #include "backends/imgui_impl_sdl3.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#include <imnodes.h>
 
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
@@ -20,6 +19,10 @@
 #include <fstream>
 
 #include "vulkan_renderer.hpp"
+
+#ifndef _countof
+#define _countof(_Array) (sizeof(_Array) / sizeof(_Array[0]))
+#endif
 
 namespace paranoixa {
 
@@ -116,7 +119,6 @@ void VulkanRenderer::Initialize(void *window) {
   CreateDescriptorPool(descriptorPoolForImGui);
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImNodes::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
   io.ConfigFlags |=

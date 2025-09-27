@@ -1,4 +1,4 @@
-#ifndef EMSCRIPTEN
+#ifdef _WIN32
 #ifndef PARANOIXA_D3D12U_RENDERER_HPP
 #define PARANOIXA_D3D12U_RENDERER_HPP
 #include <d3d12.h>
