@@ -115,7 +115,11 @@ if(EMSCRIPTEN)
   target_link_libraries(paranoixa PRIVATE SDL3::SDL3)
 endif()
 
-if(WIN32 OR ANDROID)
+if(ANDROID)
+  target_link_libraries(paranoixa PRIVATE ${SDL3_LIBS})
+endif()
+
+if(WIN32)
   if(PARANOIXA_USE_WEBGPU)
     target_link_libraries(paranoixa PRIVATE
       webgpu

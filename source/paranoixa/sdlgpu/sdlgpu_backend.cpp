@@ -508,10 +508,15 @@ Device::AcquireSwapchainTexture(Ptr<px::CommandBuffer> commandBuffer) {
 }
 px::TextureFormat Device::GetSwapchainFormat() const {
   auto format = SDL_GetGPUSwapchainTextureFormat(device, window);
-  if (format == SDL_GPUTextureFormat::SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM) {
+  switch (format) {
+  case SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM:
     return px::TextureFormat::B8G8R8A8_UNORM;
-  }
-  return px::TextureFormat::Invalid;
+  case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM:
+    return px::TextureFormat::R8G8B8A8_UNORM;
+  default:
+    SDL_assert(false && "Unsupported swapchain format");
+    return px::TextureFormat::Invalid;
+  };
 }
 void Device::WaitForGPUIdle() { SDL_WaitForGPUIdle(device); }
 String Device::GetDriver() const {
