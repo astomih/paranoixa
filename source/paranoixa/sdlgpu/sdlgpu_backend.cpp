@@ -14,7 +14,10 @@ Ptr<px::Device> Backend::CreateDevice(const Device::CreateInfo &createInfo) {
   SDL_GPUDevice *device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV,
                                               createInfo.debugMode, nullptr);
   if (!device) {
-    std::cout << "Failed to create GPU device" << std::endl;
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Failed to create SDL_GPUDevice:\n");
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, SDL_GetError());
+    return nullptr;
   }
   return MakePtr<Device>(createInfo.allocator, createInfo, device);
 }
@@ -236,7 +239,9 @@ Device::~Device() {
 }
 void Device::ClaimWindow(void *window) {
   if (!SDL_ClaimWindowForGPUDevice(device, static_cast<SDL_Window *>(window))) {
-    std::cout << "Failed to claim window for GPU device" << std::endl;
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Failed to claim window for GPU device:\n");
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, SDL_GetError());
   }
   this->window = static_cast<SDL_Window *>(window);
 }
@@ -514,6 +519,8 @@ px::TextureFormat Device::GetSwapchainFormat() const {
   case SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM:
     return px::TextureFormat::R8G8B8A8_UNORM;
   default:
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                 "Unsupported swapchain format: %d", format);
     SDL_assert(false && "Unsupported swapchain format");
     return px::TextureFormat::Invalid;
   };
