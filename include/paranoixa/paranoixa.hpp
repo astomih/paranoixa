@@ -269,6 +269,8 @@ public:
   };
   virtual ~Texture() = default;
 
+  const CreateInfo &getCreateInfo() const { return createInfo; }
+
 protected:
   Texture(const CreateInfo &createInfo) : createInfo(createInfo) {}
 
@@ -367,6 +369,8 @@ public:
   };
   virtual ~Buffer() = default;
 
+  const CreateInfo &getCreateInfo() const { return createInfo; }
+
 protected:
   Buffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
 
@@ -440,6 +444,8 @@ public:
     TargetInfo targetInfo;
   };
   virtual ~GraphicsPipeline() = default;
+
+  const CreateInfo &getCreateInfo() const { return createInfo; }
 
 protected:
   GraphicsPipeline(const CreateInfo &createInfo) : createInfo(createInfo) {}
@@ -532,6 +538,8 @@ public:
 
   virtual void PushVertexUniformData(uint32 slot, const void *data,
                                      size_t size) = 0;
+
+  const CreateInfo &getCreateInfo() const { return createInfo; }
 
 protected:
   CommandBuffer(const CreateInfo &createInfo) : createInfo(createInfo) {}
