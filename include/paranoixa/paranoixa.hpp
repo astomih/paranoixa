@@ -536,8 +536,7 @@ public:
                   float g = 0.f, float b = 0.f, float a = 1.f) = 0;
   virtual void EndRenderPass(Ptr<RenderPass> renderPass) = 0;
 
-  virtual void PushVertexUniformData(uint32 slot, const void *data,
-                                     size_t size) = 0;
+  virtual void PushUniformData(uint32 slot, const void *data, size_t size) = 0;
 
   const CreateInfo &getCreateInfo() const { return createInfo; }
 

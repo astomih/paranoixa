@@ -225,9 +225,10 @@ CommandBuffer::BeginRenderPass(const Array<ColorTargetInfo> &infos,
 void CommandBuffer::EndRenderPass(Ptr<px::RenderPass> renderPass) {
   SDL_EndGPURenderPass(DownCast<RenderPass>(renderPass)->GetNative());
 }
-void CommandBuffer::PushVertexUniformData(uint32 slot, const void *data,
-                                          size_t size) {
+void CommandBuffer::PushUniformData(uint32 slot, const void *data,
+                                    size_t size) {
   SDL_PushGPUVertexUniformData(this->commandBuffer, slot, data, size);
+  SDL_PushGPUFragmentUniformData(this->commandBuffer, slot, data, size);
 }
 GraphicsPipeline::~GraphicsPipeline() {
   SDL_ReleaseGPUGraphicsPipeline(device->GetNative(), pipeline);
