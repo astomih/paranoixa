@@ -24,7 +24,7 @@ jobs:
         version: ${{ env.EM_VERSION }}
     - name: CMake
       run: |
-        git submodule update --init library/imgui library/imnodes library/SDL library/tlsf library/volk library/VulkanMemoryAllocator
+        git submodule update --init library/imgui library/SDL library/tlsf library/volk library/VulkanMemoryAllocator
         mkdir build/emscripten
         emcmake cmake -B build/emscripten
     - name: Build
