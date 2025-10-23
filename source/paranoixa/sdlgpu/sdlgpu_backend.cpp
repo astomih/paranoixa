@@ -30,6 +30,8 @@ void CopyPass::UploadTexture(const TextureTransferInfo &src,
   };
   SDL_GPUTextureRegion region = {
       .texture = DownCast<Texture>(dst.texture)->GetNative(),
+      .mip_level = dst.mipLevel,
+      .layer = dst.layer,
       .x = dst.x,
       .y = dst.y,
       .z = dst.z,

@@ -85,10 +85,17 @@ enum class TextureFormat {
   Invalid,
   R8G8B8A8_UNORM,
   B8G8R8A8_UNORM,
+  R32G32B32A32_FLOAT,
   D32_FLOAT_S8_UINT
 };
 enum class TextureUsage { Sampler, ColorTarget, DepthStencilTarget };
-enum class TextureType { Texture2D, Texture3D };
+enum class TextureType {
+  Texture2D,
+  Texture2DArray,
+  Texture3D,
+  Cube,
+  CubeArray
+};
 enum class BufferUsage { Vertex, Index, Indirect };
 enum class SampleCount {
   x1,
@@ -283,6 +290,8 @@ struct TextureTransferInfo {
 };
 struct TextureRegion {
   Ptr<class Texture> texture;
+  uint32 mipLevel;
+  uint32 layer;
   uint32 x, y, z;
   uint32 width;
   uint32 height;

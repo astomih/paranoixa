@@ -76,6 +76,8 @@ SDL_GPUTextureFormat TextureFormatFrom(TextureFormat textureFormat) {
     return SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
   case TextureFormat::B8G8R8A8_UNORM:
     return SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
+  case TextureFormat::R32G32B32A32_FLOAT:
+    return SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
   case TextureFormat::D32_FLOAT_S8_UINT:
     return SDL_GPU_TEXTUREFORMAT_D32_FLOAT_S8_UINT;
   default:
@@ -109,13 +111,20 @@ SDL_GPUVertexInputRate VertexInputRateFrom(VertexInputRate vertexInputRate) {
     return SDL_GPU_VERTEXINPUTRATE_VERTEX;
   }
 }
-SDL_GPUTextureType TextureTypeFrom(TextureType textureType) {
+SDL_GPUTextureType TextureTypeFrom(const TextureType textureType) {
   switch (textureType) {
   case TextureType::Texture2D:
     return SDL_GPU_TEXTURETYPE_2D;
+  case TextureType::Texture2DArray:
+    return SDL_GPU_TEXTURETYPE_2D_ARRAY;
   case TextureType::Texture3D:
     return SDL_GPU_TEXTURETYPE_3D;
+  case TextureType::Cube:
+    return SDL_GPU_TEXTURETYPE_CUBE;
+  case TextureType::CubeArray:
+    return SDL_GPU_TEXTURETYPE_CUBE_ARRAY;
   default:
+    assert(false && "Invalid texture type");
     return SDL_GPU_TEXTURETYPE_2D;
   }
 }
